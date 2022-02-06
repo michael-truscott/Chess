@@ -115,7 +115,7 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 	switch (move->piece->type) {
 	case PieceType::PAWN:
 	{
-		if (!IsPathClear(move))
+		if (!IsPathClear(move->piece, move->newRank, move->newFile))
 			break;
 		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
 		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
@@ -139,7 +139,7 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 	}
 	case PieceType::BISHOP:
 	{
-		if (!IsPathClear(move))
+		if (!IsPathClear(move->piece, move->newRank, move->newFile))
 			break;
 		if (absRankDelta == absFileDelta)
 			return true;
@@ -147,7 +147,7 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 	}
 	case PieceType::ROOK:
 	{
-		if (!IsPathClear(move))
+		if (!IsPathClear(move->piece, move->newRank, move->newFile))
 			break;
 		if (absRankDelta == 0 && absFileDelta != 0 ||
 			absRankDelta != 0 && absFileDelta == 0)
@@ -155,7 +155,7 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 		break;
 	}
 	case PieceType::QUEEN:
-		if (!IsPathClear(move))
+		if (!IsPathClear(move->piece, move->newRank, move->newFile))
 			break;
 		if (absRankDelta == 0 && absFileDelta != 0 ||
 			absRankDelta != 0 && absFileDelta == 0 ||
@@ -163,7 +163,7 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 			return true;
 		break;
 	case PieceType::KING:
-		if (!IsPathClear(move))
+		if (!IsPathClear(move->piece, move->newRank, move->newFile))
 			break;
 		if (absFileDelta <= 1 && absRankDelta <= 1)
 			return true;
@@ -221,12 +221,12 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 	return move;
 }
 
-bool BoardState::IsPathClear(ChessMove* move)
+bool BoardState::IsPathClear(Piece* piece, Rank targetRank, File targetFile)
 {
 	// This will only work on horizontal/vertical/diagonal paths, should never be used for irregular paths e.g. knight L-shaped moves.
-	int rankDelta = (int)move->newRank - (int)move->oldRank;
-	int fileDelta = (int)move->newFile - (int)move->oldFile;
-	
+	int rankDelta = (int)targetRank - (int)piece->rank;
+	int fileDelta = (int)targetFile - (int)piece->file;
+
 	int rankStep;
 	if (rankDelta < 0)
 		rankStep = -1;
@@ -243,17 +243,81 @@ bool BoardState::IsPathClear(ChessMove* move)
 	else
 		fileStep = 1;
 
-	int rank = (int)move->oldRank + rankStep;
-	int file = (int)move->oldFile + fileStep;
+	int rank = (int)piece->rank + rankStep;
+	int file = (int)piece->file + fileStep;
 	while (true) {
-		if (rank == (int)move->newRank && file == (int)move->newFile)
+		if (rank == (int)targetRank && file == (int)targetFile)
 			return true;
-		
+
 		if (GetPieceAt((Rank)rank, (File)file) != nullptr)
 			return false;
 
 		rank += rankStep;
 		file += fileStep;
+	}
+}
+
+bool BoardState::IsSquareUnderAttackByColor(Rank rank, File file, Color color)
+{
+	for (auto& piece : m_pieces) {
+		if (piece->captured || piece->color != color)
+			continue;
+
+		if (IsPieceAttackingSquare(piece.get(), rank, file))
+			return true;
+	}
+	return false;
+}
+
+bool BoardState::IsPieceAttackingSquare(Piece* piece, Rank rank, File file)
+{
+	if (piece->rank == rank && piece->file == file)
+		return false; // can't attack ourselves!
+
+	int rankDelta = (int)rank - (int)piece->rank;
+	int fileDelta = (int)file - (int)piece->file;
+	int absRankDelta = std::abs(rankDelta);
+	int absFileDelta = std::abs(fileDelta);
+
+	switch (piece->type) {
+	case PieceType::PAWN:
+	{
+		if (piece->color == Color::WHITE && rankDelta == 1 && absFileDelta == 1)
+			return true;
+		if (piece->color == Color::BLACK && rankDelta == -1 && absFileDelta == 1)
+			return true;
+
+		return false;
+	}
+	case PieceType::KNIGHT:
+	{
+		return (absRankDelta == 1 && absFileDelta == 2 ||
+			absRankDelta == 2 && absFileDelta == 1);
+	}
+	case PieceType::BISHOP:
+	{
+		return absRankDelta == absFileDelta && IsPathClear(piece, rank, file);
+	}
+	case PieceType::ROOK:
+	{
+		bool validMoveDirection = absRankDelta > 0 && absFileDelta == 0 || absRankDelta == 0 && absFileDelta > 0;
+		return validMoveDirection && IsPathClear(piece, rank, file);
+	}
+	case PieceType::QUEEN:
+	{
+		bool validMoveDirection = absRankDelta > 0 && absFileDelta == 0 ||
+			absRankDelta == 0 && absFileDelta > 0 ||
+			absRankDelta == absFileDelta;
+		return validMoveDirection && IsPathClear(piece, rank, file);
+	}
+	case PieceType::KING:
+	{
+		return absFileDelta <= 1 && absRankDelta <= 1;
+	}
+	default:
+	{
+		return false;
+	}
 	}
 }
 
@@ -286,7 +350,6 @@ void BoardState::UnapplyMove(ChessMove* move)
 		move->extra.captureData.capturedPiece->captured = false;
 		break;
 	}
-	// Bug: hasMoved is not restored on rewind, find a good place to store it
 
 	// if no other moves for this piece exist in the move history, this must have been the first move
 	auto otherMove = std::find_if(m_moveHistory.begin(), m_moveHistory.end(),

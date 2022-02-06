@@ -17,6 +17,7 @@ private:
     SDL_Renderer* m_renderer;
     void DrawBoard();
     void DrawPiece(Piece* piece);
+    void DrawSquareHighlight(Rank rank, File file);
     void HandleMouse();
 
     void ResetBoard();

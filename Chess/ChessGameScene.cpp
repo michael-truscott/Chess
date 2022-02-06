@@ -116,18 +116,19 @@ void ChessGameScene::Render()
 	DrawBoard();
 
 	for (auto& piece : m_boardState.GetAllPieces()) {
-		if (!piece->captured)
-			DrawPiece(piece.get());
-	}
+		if (piece->captured)
+			continue;
 		
-
+		DrawPiece(piece.get());
+		if (m_boardState.IsSquareUnderAttackByColor(piece->rank, piece->file, piece->color == Color::WHITE ? Color::BLACK : Color::WHITE)) {
+			SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
+			DrawSquareHighlight(piece->rank, piece->file);
+		}
+	}
+	
 	if (m_selectedPiece) {
 		SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
-		int rankInt = m_flipView ? (int)m_selectedPiece->rank : (7 - (int)m_selectedPiece->rank);
-		int x = BOARD_X_OFFSET + SQUARE_SIZE * (int)m_selectedPiece->file;
-		int y = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
-		SDL_Rect rect{ x, y, 64, 64 };
-		SDL_RenderDrawRect(m_renderer, &rect);
+		DrawSquareHighlight(m_selectedPiece->rank, m_selectedPiece->file);
 	}
 }
 
@@ -161,4 +162,13 @@ void ChessGameScene::DrawPiece(Piece* piece)
 	SDL_Rect rect{ x, y, 64, 64 };
 	SDL_Texture* texture = piece->color == Color::WHITE ? m_whitePieceImages[(int)piece->type] : m_blackPieceImages[(int)piece->type];
 	SDL_RenderCopy(m_renderer, texture, NULL, &rect);
+}
+
+void ChessGameScene::DrawSquareHighlight(Rank rank, File file)
+{
+	int rankInt = m_flipView ? (int)rank : (7 - (int)rank);
+	int x = BOARD_X_OFFSET + SQUARE_SIZE * (int)file;
+	int y = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
+	SDL_Rect rect{ x, y, 64, 64 };
+	SDL_RenderDrawRect(m_renderer, &rect);
 }

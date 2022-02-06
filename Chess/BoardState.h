@@ -20,14 +20,17 @@ public:
 
 	bool MovePiece(Piece* piece, Rank newRank, File newFile);
 	bool IsMoveLegal(ChessMove* move);
+	
+	bool IsSquareUnderAttackByColor(Rank rank, File file, Color color);
+	bool IsPieceAttackingSquare(Piece* piece, Rank rank, File file);
 private:
 	void RemovePiece(Piece* piece);
 	void NextTurn();
 
 	std::unique_ptr<ChessMove> TryCreateMove(Piece* piece, Rank newRank, File newFile);
 
-	bool IsPathClear(ChessMove* move);
-
+	bool IsPathClear(Piece* piece, Rank targetRank, File targetFile);
+	
 	void ApplyMove(ChessMove* move);
 	void UnapplyMove(ChessMove* move);
 
