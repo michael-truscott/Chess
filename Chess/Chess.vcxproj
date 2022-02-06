@@ -148,7 +148,8 @@
     <ClCompile Include="AssetLoader.cpp" />
     <ClCompile Include="BoardState.cpp" />
     <ClCompile Include="ChessGameScene.cpp" />
-    <ClCompile Include="events.cpp" />
+    <ClCompile Include="ChessMove.cpp" />
+    <ClCompile Include="Events.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
@@ -160,7 +161,8 @@
     <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="BoardState.h" />
     <ClInclude Include="ChessGameScene.h" />
-    <ClInclude Include="events.h" />
+    <ClInclude Include="ChessMove.h" />
+    <ClInclude Include="Events.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="Input.h" />

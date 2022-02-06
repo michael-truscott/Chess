@@ -1,4 +1,4 @@
-#include "events.h"
+#include "Events.h"
 #include <stdexcept>
 
 namespace Events {

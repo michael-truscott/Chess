@@ -49,6 +49,18 @@ void BoardState::Reset()
 	m_currentTurn = Color::WHITE;
 }
 
+bool BoardState::Rewind()
+{
+	if (m_moveHistory.empty())
+		return false;
+
+	auto& move = m_moveHistory.back();
+	UnapplyMove(move.get());
+	NextTurn();
+	m_moveHistory.pop_back();
+	return true;
+}
+
 const std::vector<std::unique_ptr<Piece>>& BoardState::GetAllPieces() const
 {
 	return m_pieces;
@@ -57,7 +69,7 @@ const std::vector<std::unique_ptr<Piece>>& BoardState::GetAllPieces() const
 Piece* BoardState::GetPieceAt(Rank rank, File file)
 {
 	for (auto& piece : m_pieces) {
-		if (piece->rank == rank && piece->file == file) {
+		if (!piece->captured && piece->rank == rank && piece->file == file) {
 			return piece.get();
 		}
 	}
@@ -79,30 +91,210 @@ const Color BoardState::CurrentTurn() const
 /// <returns>True if the move succeeded, false otherwise.</returns>
 bool BoardState::MovePiece(Piece* piece, Rank newRank, File newFile)
 {
-	// TODO: do move validation, store move history, etc.
-	Piece* occupyingPiece = GetPieceAt(newRank, newFile);
-	if (occupyingPiece) {
-		if (occupyingPiece->color == piece->color)
-			return false; // can't capture a piece of your own colour
-		else
-			RemovePiece(occupyingPiece);
-	}
+	auto move = TryCreateMove(piece, newRank, newFile);
+	if (!move || !IsMoveLegal(move.get()))
+		return false;
 
-	piece->rank = newRank;
-	piece->file = newFile;
+	ApplyMove(move.get());
+	m_moveHistory.push_back(std::move(move));
 	NextTurn();
 	return true;
 }
 
+bool BoardState::IsMoveLegal(ChessMove* move)
+{
+	// TODO:
+	// - Check/checkmate detection
+	// - Pawns: en passant
+	// - Castling
+	int rankDelta = (int)move->newRank - (int)move->oldRank;
+	int fileDelta = (int)move->newFile - (int)move->oldFile;
+	int absRankDelta = std::abs(rankDelta);
+	int absFileDelta = std::abs(fileDelta);
+	
+	switch (move->piece->type) {
+	case PieceType::PAWN:
+	{
+		if (!IsPathClear(move))
+			break;
+		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
+		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
+		if ((fileDelta == 0 && rankDelta == oneSpace) ||
+			(!move->piece->hasMoved && rankDelta == twoSpaces)) {
+			return true;
+		}
+
+		if (move->type == ChessMoveType::CAPTURE) {
+			if (rankDelta == oneSpace && absFileDelta == 1)
+				return true;
+		}
+		break;
+	}
+	case PieceType::KNIGHT:
+	{
+		if (absRankDelta == 1 && absFileDelta == 2 ||
+			absRankDelta == 2 && absFileDelta == 1)
+			return true;
+		break;
+	}
+	case PieceType::BISHOP:
+	{
+		if (!IsPathClear(move))
+			break;
+		if (absRankDelta == absFileDelta)
+			return true;
+		break;
+	}
+	case PieceType::ROOK:
+	{
+		if (!IsPathClear(move))
+			break;
+		if (absRankDelta == 0 && absFileDelta != 0 ||
+			absRankDelta != 0 && absFileDelta == 0)
+			return true;
+		break;
+	}
+	case PieceType::QUEEN:
+		if (!IsPathClear(move))
+			break;
+		if (absRankDelta == 0 && absFileDelta != 0 ||
+			absRankDelta != 0 && absFileDelta == 0 ||
+			absRankDelta == absFileDelta)
+			return true;
+		break;
+	case PieceType::KING:
+		if (!IsPathClear(move))
+			break;
+		if (absFileDelta <= 1 && absRankDelta <= 1)
+			return true;
+		break;
+	}
+	return false;
+}
+
 void BoardState::RemovePiece(Piece* piece)
 {
-	m_pieces.erase(
-		std::remove_if(m_pieces.begin(), m_pieces.end(),
-			[piece](const std::unique_ptr<Piece>& p) { return p.get() == piece; })
-	);
+	piece->captured = true;
 }
 
 void BoardState::NextTurn()
 {
 	m_currentTurn = m_currentTurn == Color::WHITE ? Color::BLACK : Color::WHITE;
 }
+
+/// <summary>
+/// Try and create a ChessMove instance representing the given move for the piece.
+/// Returns a unique_ptr holding the move if successful, or holding null if not.
+/// </summary>
+/// <param name="piece">The piece to move.</param>
+/// <param name="newRank"></param>
+/// <param name="newFile"></param>
+/// <returns></returns>
+std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank, File newFile)
+{
+	std::unique_ptr<ChessMove> nullResult = std::unique_ptr<ChessMove>();
+
+	Piece* occupyingPiece = GetPieceAt(newRank, newFile);
+	if (occupyingPiece) {
+		if (occupyingPiece->color == piece->color)
+			return std::unique_ptr<ChessMove>(); // can't capture a piece of your own colour
+		else {
+			auto move = std::make_unique<ChessMove>();
+			move->type = ChessMoveType::CAPTURE;
+			move->piece = piece;
+			move->oldRank = piece->rank;
+			move->oldFile = piece->file;
+			move->newRank = newRank;
+			move->newFile = newFile;
+			move->extra.captureData.capturedPiece = occupyingPiece;
+			return move;
+		}
+	}
+
+	auto move = std::make_unique<ChessMove>();
+	move->type = ChessMoveType::NORMAL;
+	move->piece = piece;
+	move->oldRank = piece->rank;
+	move->oldFile = piece->file;
+	move->newRank = newRank;
+	move->newFile = newFile;
+	return move;
+}
+
+bool BoardState::IsPathClear(ChessMove* move)
+{
+	// This will only work on horizontal/vertical/diagonal paths, should never be used for irregular paths e.g. knight L-shaped moves.
+	int rankDelta = (int)move->newRank - (int)move->oldRank;
+	int fileDelta = (int)move->newFile - (int)move->oldFile;
+	
+	int rankStep;
+	if (rankDelta < 0)
+		rankStep = -1;
+	else if (rankDelta == 0)
+		rankStep = 0;
+	else
+		rankStep = 1;
+
+	int fileStep;
+	if (fileDelta < 0)
+		fileStep = -1;
+	else if (fileDelta == 0)
+		fileStep = 0;
+	else
+		fileStep = 1;
+
+	int rank = (int)move->oldRank + rankStep;
+	int file = (int)move->oldFile + fileStep;
+	while (true) {
+		if (rank == (int)move->newRank && file == (int)move->newFile)
+			return true;
+		
+		if (GetPieceAt((Rank)rank, (File)file) != nullptr)
+			return false;
+
+		rank += rankStep;
+		file += fileStep;
+	}
+}
+
+void BoardState::ApplyMove(ChessMove* move)
+{
+	switch (move->type) {
+	case ChessMoveType::NORMAL:
+		move->piece->rank = move->newRank;
+		move->piece->file = move->newFile;
+		break;
+	case ChessMoveType::CAPTURE:
+		move->piece->rank = move->newRank;
+		move->piece->file = move->newFile;
+		move->extra.captureData.capturedPiece->captured = true;
+		break;
+	}
+	move->piece->hasMoved = true;
+}
+
+void BoardState::UnapplyMove(ChessMove* move)
+{
+	switch (move->type) {
+	case ChessMoveType::NORMAL:
+		move->piece->rank = move->oldRank;
+		move->piece->file = move->oldFile;
+		break;
+	case ChessMoveType::CAPTURE:
+		move->piece->rank = move->oldRank;
+		move->piece->file = move->oldFile;
+		move->extra.captureData.capturedPiece->captured = false;
+		break;
+	}
+	// Bug: hasMoved is not restored on rewind, find a good place to store it
+
+	// if no other moves for this piece exist in the move history, this must have been the first move
+	auto otherMove = std::find_if(m_moveHistory.begin(), m_moveHistory.end(),
+		[move](const std::unique_ptr<ChessMove>& m) {
+			return m.get() != move && m->piece == move->piece;
+		});
+	if (otherMove == m_moveHistory.end()) {
+		move->piece->hasMoved = false;
+	}
+}
+

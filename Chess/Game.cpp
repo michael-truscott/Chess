@@ -7,7 +7,7 @@
 #include "Input.h"
 #include "AssetLoader.h"
 #include "ChessGameScene.h"
-#include "events.h"
+#include "Events.h"
 
 static constexpr int WINDOW_W = 800;
 static constexpr int WINDOW_H = 600;

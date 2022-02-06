@@ -43,6 +43,9 @@ void ChessGameScene::Update(float dt)
 	if (Input::KeyPressed(SDL_SCANCODE_F)) {
 		FlipView();
 	}
+	if (Input::KeyPressed(SDL_SCANCODE_LEFT)) {
+		m_boardState.Rewind();
+	}
 }
 
 void ChessGameScene::HandleMouse()
@@ -112,8 +115,11 @@ void ChessGameScene::Render()
 
 	DrawBoard();
 
-	for (auto& piece : m_boardState.GetAllPieces())
-		DrawPiece(piece.get());
+	for (auto& piece : m_boardState.GetAllPieces()) {
+		if (!piece->captured)
+			DrawPiece(piece.get());
+	}
+		
 
 	if (m_selectedPiece) {
 		SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
@@ -133,14 +139,10 @@ void ChessGameScene::DrawBoard()
 	for (int y = 0; y < 8; y++) {
 		isLightSquare = y % 2 == 0;
 		for (int x = 0; x < 8; x++) {
-			if (isLightSquare) {
+			if (isLightSquare)
 				SDL_SetRenderDrawColor(m_renderer, 240, 217, 181, 255);
-				//SDL_SetRenderDrawColor(m_renderer, 255, 246, 0, 255);
-			}
-			else {
+			else
 				SDL_SetRenderDrawColor(m_renderer, 181, 136, 99, 255);
-				//SDL_SetRenderDrawColor(m_renderer, 0, 38, 255, 255);
-			}
 			
 			int rectX = BOARD_X_OFFSET + x * SQUARE_SIZE;
 			int rectY = m_flipView ? BOARD_Y_OFFSET + ((7 - y) * SQUARE_SIZE) : BOARD_Y_OFFSET + y * SQUARE_SIZE;

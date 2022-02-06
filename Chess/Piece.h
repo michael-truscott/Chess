@@ -44,4 +44,6 @@ struct Piece {
     Color color;
     Rank rank;
     File file;
+    bool captured;
+    bool hasMoved;
 };
