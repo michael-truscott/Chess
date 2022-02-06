@@ -3,52 +3,8 @@
 #include <SDL.h>
 #include <vector>
 #include <array>
-
-enum class PieceType {
-    PAWN,
-    KNIGHT,
-    BISHOP,
-    ROOK,
-    QUEEN,
-    KING,
-    MAX,
-};
-
-enum class Color {
-    WHITE,
-    BLACK,
-};
-
-enum class Rank {
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
-    R8,
-};
-
-enum class File {
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-};
-
-struct Piece {
-    Piece(PieceType type, Color color, Rank rank, File file);
-
-    PieceType type;
-    Color color;
-    Rank rank;
-    File file;
-};
+#include "Piece.h"
+#include "BoardState.h"
 
 class ChessGameScene : public Scene
 {
@@ -64,17 +20,17 @@ private:
     void HandleMouse();
 
     void ResetBoard();
-    void NextTurn();
+    void FlipView();
 
-    Piece* GetPieceAt(Rank rank, File file);
     void ScreenCoordsToRankAndFile(int screenX, int screenY, Rank* rank, File* file);
 
-    std::vector<std::unique_ptr<Piece>> m_pieces;
+    BoardState m_boardState;
+    
+    Piece* m_selectedPiece;
+    bool m_flipView;
+
     std::array<SDL_Texture*, (int)PieceType::MAX> m_whitePieceImages;
     std::array<SDL_Texture*, (int)PieceType::MAX> m_blackPieceImages;
-    Piece* m_selectedPiece;
-    
-    Color m_currentTurn;
     std::array<SDL_Texture*, 2> m_turnImages;
 };
 
