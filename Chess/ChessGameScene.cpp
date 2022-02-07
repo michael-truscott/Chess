@@ -115,20 +115,33 @@ void ChessGameScene::Render()
 
 	DrawBoard();
 
+	auto lastMove = m_boardState.LastMove();
+	if (lastMove) {
+		SDL_SetRenderDrawColor(m_renderer, 255, 255, 0, 128);
+		DrawSquareHighlight(lastMove->oldRank, lastMove->oldFile);
+		DrawSquareHighlight(lastMove->newRank, lastMove->newFile);
+	}
+
+	bool whiteInCheck = m_boardState.IsPositionInCheck(Color::WHITE);
+	bool blackInCheck = m_boardState.IsPositionInCheck(Color::BLACK);
 	for (auto& piece : m_boardState.GetAllPieces()) {
 		if (piece->captured)
 			continue;
-		
-		DrawPiece(piece.get());
-		if (m_boardState.IsSquareUnderAttackByColor(piece->rank, piece->file, piece->color == Color::WHITE ? Color::BLACK : Color::WHITE)) {
+
+		// Draw highlight depending on state priority
+		if (piece.get() == m_selectedPiece) {
+			SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 192);
+			DrawSquareHighlight(piece->rank, piece->file);
+		}
+		else if (piece->type == PieceType::KING &&
+				(piece->color == Color::WHITE && whiteInCheck ||
+				piece->color == Color::BLACK && blackInCheck))
+		{
 			SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
 			DrawSquareHighlight(piece->rank, piece->file);
 		}
-	}
-	
-	if (m_selectedPiece) {
-		SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 255);
-		DrawSquareHighlight(m_selectedPiece->rank, m_selectedPiece->file);
+		
+		DrawPiece(piece.get());
 	}
 }
 
@@ -170,5 +183,5 @@ void ChessGameScene::DrawSquareHighlight(Rank rank, File file)
 	int x = BOARD_X_OFFSET + SQUARE_SIZE * (int)file;
 	int y = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
 	SDL_Rect rect{ x, y, 64, 64 };
-	SDL_RenderDrawRect(m_renderer, &rect);
+	SDL_RenderFillRect(m_renderer, &rect);
 }

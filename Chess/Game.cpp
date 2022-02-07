@@ -60,6 +60,7 @@ void Game::Init()
 
 	if ((m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RendererFlags::SDL_RENDERER_ACCELERATED)) == NULL)
 		throw std::runtime_error("Renderer creation failed");
+	SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
 
 	AssetLoader::Init(m_renderer);
 

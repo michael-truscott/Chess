@@ -68,6 +68,11 @@ const std::vector<std::unique_ptr<Piece>>& BoardState::GetAllPieces() const
 
 Piece* BoardState::GetPieceAt(Rank rank, File file)
 {
+	return const_cast<Piece*>(const_cast<const BoardState*>(this)->GetPieceAt(rank, file));
+}
+
+const Piece* BoardState::GetPieceAt(Rank rank, File file) const
+{
 	for (auto& piece : m_pieces) {
 		if (!piece->captured && piece->rank == rank && piece->file == file) {
 			return piece.get();
@@ -96,12 +101,18 @@ bool BoardState::MovePiece(Piece* piece, Rank newRank, File newFile)
 		return false;
 
 	ApplyMove(move.get());
+
+	if (IsPositionInCheck(piece->color)) {
+		UnapplyMove(move.get());
+		return false;
+	}
+
 	m_moveHistory.push_back(std::move(move));
 	NextTurn();
 	return true;
 }
 
-bool BoardState::IsMoveLegal(ChessMove* move)
+bool BoardState::IsMoveLegal(ChessMove* move) const
 {
 	// TODO:
 	// - Check/checkmate detection
@@ -115,12 +126,10 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 	switch (move->piece->type) {
 	case PieceType::PAWN:
 	{
-		if (!IsPathClear(move->piece, move->newRank, move->newFile))
-			break;
 		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
 		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
 		if ((fileDelta == 0 && rankDelta == oneSpace) ||
-			(!move->piece->hasMoved && rankDelta == twoSpaces)) {
+			(!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces)) {
 			return true;
 		}
 
@@ -139,32 +148,26 @@ bool BoardState::IsMoveLegal(ChessMove* move)
 	}
 	case PieceType::BISHOP:
 	{
-		if (!IsPathClear(move->piece, move->newRank, move->newFile))
-			break;
-		if (absRankDelta == absFileDelta)
+		if (absRankDelta == absFileDelta && IsPathClear(move->piece, move->newRank, move->newFile))
 			return true;
 		break;
 	}
 	case PieceType::ROOK:
 	{
-		if (!IsPathClear(move->piece, move->newRank, move->newFile))
-			break;
-		if (absRankDelta == 0 && absFileDelta != 0 ||
-			absRankDelta != 0 && absFileDelta == 0)
+		if ((absRankDelta == 0 && absFileDelta != 0 ||
+			absRankDelta != 0 && absFileDelta == 0) &&
+			IsPathClear(move->piece, move->newRank, move->newFile))
 			return true;
 		break;
 	}
 	case PieceType::QUEEN:
-		if (!IsPathClear(move->piece, move->newRank, move->newFile))
-			break;
-		if (absRankDelta == 0 && absFileDelta != 0 ||
+		if ((absRankDelta == 0 && absFileDelta != 0 ||
 			absRankDelta != 0 && absFileDelta == 0 ||
-			absRankDelta == absFileDelta)
+			absRankDelta == absFileDelta) &&
+			IsPathClear(move->piece, move->newRank, move->newFile))
 			return true;
 		break;
 	case PieceType::KING:
-		if (!IsPathClear(move->piece, move->newRank, move->newFile))
-			break;
 		if (absFileDelta <= 1 && absRankDelta <= 1)
 			return true;
 		break;
@@ -190,11 +193,11 @@ void BoardState::NextTurn()
 /// <param name="newRank"></param>
 /// <param name="newFile"></param>
 /// <returns></returns>
-std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank, File newFile)
+std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank, File newFile) const
 {
 	std::unique_ptr<ChessMove> nullResult = std::unique_ptr<ChessMove>();
 
-	Piece* occupyingPiece = GetPieceAt(newRank, newFile);
+	const Piece* occupyingPiece = GetPieceAt(newRank, newFile);
 	if (occupyingPiece) {
 		if (occupyingPiece->color == piece->color)
 			return std::unique_ptr<ChessMove>(); // can't capture a piece of your own colour
@@ -206,7 +209,7 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 			move->oldFile = piece->file;
 			move->newRank = newRank;
 			move->newFile = newFile;
-			move->extra.captureData.capturedPiece = occupyingPiece;
+			move->extra.captureData.capturedPiece = const_cast<Piece*>(occupyingPiece);
 			return move;
 		}
 	}
@@ -221,7 +224,7 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 	return move;
 }
 
-bool BoardState::IsPathClear(Piece* piece, Rank targetRank, File targetFile)
+bool BoardState::IsPathClear(Piece* piece, Rank targetRank, File targetFile) const
 {
 	// This will only work on horizontal/vertical/diagonal paths, should never be used for irregular paths e.g. knight L-shaped moves.
 	int rankDelta = (int)targetRank - (int)piece->rank;
@@ -257,7 +260,8 @@ bool BoardState::IsPathClear(Piece* piece, Rank targetRank, File targetFile)
 	}
 }
 
-bool BoardState::IsSquareUnderAttackByColor(Rank rank, File file, Color color)
+// Is the given square currently under attack by any piece of a certain colour?
+bool BoardState::IsSquareUnderAttackByColor(Rank rank, File file, Color color) const
 {
 	for (auto& piece : m_pieces) {
 		if (piece->captured || piece->color != color)
@@ -269,7 +273,8 @@ bool BoardState::IsSquareUnderAttackByColor(Rank rank, File file, Color color)
 	return false;
 }
 
-bool BoardState::IsPieceAttackingSquare(Piece* piece, Rank rank, File file)
+// Is the given piece currently attacking the given square?
+bool BoardState::IsPieceAttackingSquare(Piece* piece, Rank rank, File file) const
 {
 	if (piece->rank == rank && piece->file == file)
 		return false; // can't attack ourselves!
@@ -319,6 +324,25 @@ bool BoardState::IsPieceAttackingSquare(Piece* piece, Rank rank, File file)
 		return false;
 	}
 	}
+}
+
+bool BoardState::IsPositionInCheck(Color color) const
+{
+	auto king = std::find_if(m_pieces.begin(), m_pieces.end(), [color](const std::unique_ptr<Piece>& piece) {
+		return piece->type == PieceType::KING && piece->color == color;
+	});
+	if (king == m_pieces.end()) // king doesn't exist? this probably isn't good
+		return false;
+
+	return IsSquareUnderAttackByColor((*king)->rank, (*king)->file, color == Color::WHITE ? Color::BLACK : Color::WHITE);
+}
+
+const ChessMove* BoardState::LastMove() const
+{
+	if (m_moveHistory.empty())
+		return nullptr;
+
+	return m_moveHistory.back().get();
 }
 
 void BoardState::ApplyMove(ChessMove* move)
