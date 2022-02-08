@@ -46,6 +46,9 @@ void Game::Run()
 			m_currentFrameTime -= FRAME_PERIOD;
 		}
 		Render();
+
+		// try not to hammer the cpu at full throttle, still roughly 100 frames/sec
+		SDL_Delay(10);
 	}
 }
 
