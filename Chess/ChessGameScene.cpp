@@ -97,12 +97,14 @@ void ChessGameScene::FlipView()
 
 void ChessGameScene::ScreenCoordsToRankAndFile(int screenX, int screenY, Rank* rank, File* file)
 {
-	if (m_flipView)
+	if (m_flipView) {
 		*rank = (Rank)((screenY - BOARD_Y_OFFSET) / SQUARE_SIZE);
-	else
+		*file = (File)(7 - (screenX - BOARD_X_OFFSET) / SQUARE_SIZE);
+	}
+	else {
 		*rank = (Rank)(7 - ((screenY - BOARD_Y_OFFSET) / SQUARE_SIZE));
-	
-	*file = (File)((screenX - BOARD_X_OFFSET) / SQUARE_SIZE);
+		*file = (File)((screenX - BOARD_X_OFFSET) / SQUARE_SIZE);
+	}
 }
 
 void ChessGameScene::Render()
@@ -159,7 +161,7 @@ void ChessGameScene::DrawBoard()
 				SDL_SetRenderDrawColor(m_renderer, 181, 136, 99, 255);
 			
 			int rectX = BOARD_X_OFFSET + x * SQUARE_SIZE;
-			int rectY = m_flipView ? BOARD_Y_OFFSET + ((7 - y) * SQUARE_SIZE) : BOARD_Y_OFFSET + y * SQUARE_SIZE;
+			int rectY = BOARD_Y_OFFSET + y * SQUARE_SIZE;
 			SDL_Rect rect{ rectX, rectY, SQUARE_SIZE, SQUARE_SIZE };
 			SDL_RenderFillRect(m_renderer, &rect);
 			isLightSquare = !isLightSquare;
@@ -169,9 +171,11 @@ void ChessGameScene::DrawBoard()
 
 void ChessGameScene::DrawPiece(Piece* piece)
 {
-	int x = BOARD_X_OFFSET + SQUARE_SIZE * (int)piece->file;
+	int translatedFile = m_flipView ? (7 - (int)piece->file) : (int)piece->file;
+	int translatedRank = m_flipView ? (int)piece->rank : (7 - (int)piece->rank);
+	int x = BOARD_X_OFFSET + SQUARE_SIZE * translatedFile;
+	int y = BOARD_Y_OFFSET + SQUARE_SIZE * translatedRank;
 
-	int y = m_flipView ? BOARD_Y_OFFSET + SQUARE_SIZE * (int)piece->rank : BOARD_Y_OFFSET + SQUARE_SIZE * (7 - (int)piece->rank);
 	SDL_Rect rect{ x, y, 64, 64 };
 	SDL_Texture* texture = piece->color == Color::WHITE ? m_whitePieceImages[(int)piece->type] : m_blackPieceImages[(int)piece->type];
 	SDL_RenderCopy(m_renderer, texture, NULL, &rect);
@@ -180,7 +184,8 @@ void ChessGameScene::DrawPiece(Piece* piece)
 void ChessGameScene::DrawSquareHighlight(Rank rank, File file)
 {
 	int rankInt = m_flipView ? (int)rank : (7 - (int)rank);
-	int x = BOARD_X_OFFSET + SQUARE_SIZE * (int)file;
+	int fileInt = m_flipView ? (7 - (int)file) : (int)file;
+	int x = BOARD_X_OFFSET + SQUARE_SIZE * fileInt;
 	int y = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
 	SDL_Rect rect{ x, y, 64, 64 };
 	SDL_RenderFillRect(m_renderer, &rect);
