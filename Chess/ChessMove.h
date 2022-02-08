@@ -5,10 +5,17 @@
 enum class ChessMoveType {
 	NORMAL,
 	CAPTURE,
+	CASTLE,
 };
 
 struct CaptureData {
 	Piece* capturedPiece;
+};
+
+struct CastleData {
+	Piece* rook;
+	Rank rookOldRank;
+	File rookOldFile;
 };
 
 struct ChessMove
@@ -20,7 +27,11 @@ struct ChessMove
 	Rank newRank;
 	File newFile;
 
+	bool isPromotion;
+	PieceType promoteType;
+
 	union {
 		CaptureData captureData;
+		CastleData castleData;
 	} extra;
 };

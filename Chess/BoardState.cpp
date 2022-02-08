@@ -115,9 +115,8 @@ bool BoardState::MovePiece(Piece* piece, Rank newRank, File newFile)
 bool BoardState::IsMoveLegal(ChessMove* move) const
 {
 	// TODO:
-	// - Check/checkmate detection
+	// - Checkmate detection
 	// - Pawns: en passant
-	// - Castling
 	int rankDelta = (int)move->newRank - (int)move->oldRank;
 	int fileDelta = (int)move->newFile - (int)move->oldFile;
 	int absRankDelta = std::abs(rankDelta);
@@ -170,6 +169,14 @@ bool BoardState::IsMoveLegal(ChessMove* move) const
 	case PieceType::KING:
 		if (absFileDelta <= 1 && absRankDelta <= 1)
 			return true;
+
+		if (move->type == ChessMoveType::CASTLE) {
+			if (move->piece->hasMoved || !move->extra.castleData.rook || move->extra.castleData.rook->hasMoved)
+				return false;
+			
+			if (move->newRank == move->oldRank && (move->newFile == File::G || move->newFile == File::C))
+				return true;
+		}
 		break;
 	}
 	return false;
@@ -210,6 +217,39 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 			move->newRank = newRank;
 			move->newFile = newFile;
 			move->extra.captureData.capturedPiece = const_cast<Piece*>(occupyingPiece);
+
+			// TODO: allow underpromotion (dialog prompt?), make this check less shitty and duplicated
+			if (piece->type == PieceType::PAWN &&
+				(piece->color == Color::WHITE && newRank == Rank::R8) ||
+				(piece->color == Color::BLACK && newRank == Rank::R1))
+			{
+				move->isPromotion = true;
+				move->promoteType = PieceType::QUEEN;
+			}
+
+			return move;
+		}
+	}
+
+	if (piece->type == PieceType::KING && !piece->hasMoved &&
+		(newRank == Rank::R1 || newRank == Rank::R8) &&
+		(newFile == File::C || newFile == File::G)) {
+		const Piece* rook = nullptr;
+		if (newFile == File::C)
+			rook = GetPieceAt(piece->rank, File::A);
+		else if (newFile == File::G)
+			rook = GetPieceAt(piece->rank, File::H);
+		if (rook && !rook->hasMoved) {
+			auto move = std::make_unique<ChessMove>();
+			move->type = ChessMoveType::CASTLE;
+			move->piece = piece;
+			move->oldRank = piece->rank;
+			move->oldFile = piece->file;
+			move->newRank = newRank;
+			move->newFile = newFile;
+			move->extra.castleData.rook = const_cast<Piece*>(rook);
+			move->extra.castleData.rookOldRank = rook->rank;
+			move->extra.castleData.rookOldFile = rook->file;
 			return move;
 		}
 	}
@@ -221,6 +261,14 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 	move->oldFile = piece->file;
 	move->newRank = newRank;
 	move->newFile = newFile;
+
+	if (piece->type == PieceType::PAWN &&
+		(piece->color == Color::WHITE && newRank == Rank::R8) ||
+		(piece->color == Color::BLACK && newRank == Rank::R1))
+	{
+		move->isPromotion = true;
+		move->promoteType = PieceType::QUEEN;
+	}
 	return move;
 }
 
@@ -351,12 +399,22 @@ void BoardState::ApplyMove(ChessMove* move)
 	case ChessMoveType::NORMAL:
 		move->piece->rank = move->newRank;
 		move->piece->file = move->newFile;
+		if (move->isPromotion)
+			move->piece->type = move->promoteType;
 		break;
 	case ChessMoveType::CAPTURE:
 		move->piece->rank = move->newRank;
 		move->piece->file = move->newFile;
+		if (move->isPromotion)
+			move->piece->type = move->promoteType;
 		move->extra.captureData.capturedPiece->captured = true;
 		break;
+	case ChessMoveType::CASTLE:
+		move->piece->rank = move->newRank;
+		move->piece->file = move->newFile;
+		move->extra.castleData.rook->rank = move->newRank;
+		move->extra.castleData.rook->file = move->newFile == File::G ? File::F : File::D;
+		move->extra.castleData.rook->hasMoved = true;
 	}
 	move->piece->hasMoved = true;
 }
@@ -367,12 +425,22 @@ void BoardState::UnapplyMove(ChessMove* move)
 	case ChessMoveType::NORMAL:
 		move->piece->rank = move->oldRank;
 		move->piece->file = move->oldFile;
+		if (move->isPromotion)
+			move->piece->type = PieceType::PAWN;
 		break;
 	case ChessMoveType::CAPTURE:
 		move->piece->rank = move->oldRank;
 		move->piece->file = move->oldFile;
+		if (move->isPromotion)
+			move->piece->type = PieceType::PAWN;
 		move->extra.captureData.capturedPiece->captured = false;
 		break;
+	case ChessMoveType::CASTLE:
+		move->piece->rank = move->oldRank;
+		move->piece->file = move->oldFile;
+		move->extra.castleData.rook->rank = move->extra.castleData.rookOldRank;
+		move->extra.castleData.rook->file = move->extra.castleData.rookOldFile;
+		move->extra.castleData.rook->hasMoved = false;
 	}
 
 	// if no other moves for this piece exist in the move history, this must have been the first move
