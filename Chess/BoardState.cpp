@@ -1,7 +1,9 @@
 #include "BoardState.h"
 
 BoardState::BoardState() :
-	m_currentTurn(Color::WHITE)
+	m_currentTurn(Color::WHITE),
+	m_currentPlayerInCheck(false),
+	m_currentPlayerInCheckmate(false)
 {
 	Reset();
 }
@@ -126,6 +128,8 @@ void BoardState::RemovePiece(Piece* piece)
 void BoardState::NextTurn()
 {
 	m_currentTurn = m_currentTurn == Color::WHITE ? Color::BLACK : Color::WHITE;
+	m_currentPlayerInCheck = IsPositionInCheck(m_currentTurn);
+	m_currentPlayerInCheckmate = IsPositionInCheckmate(m_currentTurn);
 }
 
 /// <summary>
@@ -322,6 +326,12 @@ bool BoardState::IsPositionInCheck(Color color) const
 	return IsSquareUnderAttackByColor((*king)->rank, (*king)->file, color == Color::WHITE ? Color::BLACK : Color::WHITE);
 }
 
+bool BoardState::IsPositionInCheckmate(Color color) const
+{
+	// TODO:
+	return false;
+}
+
 const ChessMove* BoardState::LastMove() const
 {
 	if (m_moveHistory.empty())
@@ -341,6 +351,16 @@ std::vector<std::unique_ptr<ChessMove>> BoardState::GetAllLegalMovesForPiece(Pie
 		}
 	}
 	return result;
+}
+
+const bool BoardState::CurrentPlayerInCheck() const
+{
+	return m_currentPlayerInCheck;
+}
+
+const bool BoardState::CurrentPlayerInCheckmate() const
+{
+	return m_currentPlayerInCheckmate;
 }
 
 bool BoardState::IsMovePositionLegal(ChessMove* move) const

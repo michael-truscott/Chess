@@ -48,6 +48,7 @@ void ChessGameScene::Update(float dt)
 	}
 	if (Input::KeyPressed(SDL_SCANCODE_LEFT)) {
 		m_boardState.Rewind();
+		SelectPiece(nullptr);
 	}
 }
 
@@ -147,8 +148,6 @@ void ChessGameScene::Render()
 		DrawSquareHighlight(lastMove->newRank, lastMove->newFile);
 	}
 
-	bool whiteInCheck = m_boardState.IsPositionInCheck(Color::WHITE);
-	bool blackInCheck = m_boardState.IsPositionInCheck(Color::BLACK);
 	for (auto& piece : m_boardState.GetAllPieces()) {
 		if (piece->captured)
 			continue;
@@ -158,10 +157,7 @@ void ChessGameScene::Render()
 			SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 192);
 			DrawSquareHighlight(piece->rank, piece->file);
 		}
-		else if (piece->type == PieceType::KING &&
-				(piece->color == Color::WHITE && whiteInCheck ||
-				piece->color == Color::BLACK && blackInCheck))
-		{
+		else if (piece->type == PieceType::KING && piece->color == m_boardState.CurrentTurn() && m_boardState.CurrentPlayerInCheck()) {
 			SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
 			DrawSquareHighlight(piece->rank, piece->file);
 		}

@@ -25,11 +25,18 @@ public:
 	bool IsSquareUnderAttackByColor(Rank rank, File file, Color color) const;
 	bool IsPieceAttackingSquare(Piece* piece, Rank rank, File file) const;
 
-	bool IsPositionInCheck(Color color) const;
-
 	const ChessMove* LastMove() const;
 	std::vector<std::unique_ptr<ChessMove>> GetAllLegalMovesForPiece(Piece* piece) const;
+
+	const bool CurrentPlayerInCheck() const;
+	const bool CurrentPlayerInCheckmate() const;
 private:
+	bool m_currentPlayerInCheck;
+	bool m_currentPlayerInCheckmate;
+
+	bool IsPositionInCheck(Color color) const;
+	bool IsPositionInCheckmate(Color color) const;
+
 	bool IsMovePositionLegal(ChessMove* move) const;
 
 	void RemovePiece(Piece* piece);
