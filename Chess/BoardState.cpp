@@ -131,6 +131,7 @@ void BoardState::NextTurn()
 /// <summary>
 /// Try and create a ChessMove instance representing the given move for the piece.
 /// Returns a unique_ptr holding the move if successful, or holding null if not.
+/// NOTE: This function can generate illegal moves, IsLegalMove() is responsible for filtering them out.
 /// </summary>
 /// <param name="piece">The piece to move.</param>
 /// <param name="newRank"></param>
@@ -329,6 +330,19 @@ const ChessMove* BoardState::LastMove() const
 	return m_moveHistory.back().get();
 }
 
+std::vector<std::unique_ptr<ChessMove>> BoardState::GetAllLegalMovesForPiece(Piece* piece) const
+{
+	std::vector<std::unique_ptr<ChessMove>> result;
+	for (int rank = (int)Rank::R1; rank <= (int)Rank::R8; rank++) {
+		for (int file = (int)File::A; file <= (int)File::H; file++) {
+			auto move = TryCreateMove(piece, (Rank)rank, (File)file);
+			if (move && IsMoveLegal(move.get()))
+				result.push_back(std::move(move));
+		}
+	}
+	return result;
+}
+
 bool BoardState::IsMovePositionLegal(ChessMove* move) const
 {
 	// TODO:
@@ -344,14 +358,15 @@ bool BoardState::IsMovePositionLegal(ChessMove* move) const
 	{
 		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
 		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
-		if ((fileDelta == 0 && rankDelta == oneSpace) ||
-			(!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces)) {
-			return true;
-		}
-
 		if (move->type == ChessMoveType::CAPTURE) {
 			if (rankDelta == oneSpace && absFileDelta == 1)
 				return true;
+		}
+		else {
+			if ((fileDelta == 0 && rankDelta == oneSpace) ||
+				(!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces)) {
+				return true;
+			}
 		}
 		break;
 	}

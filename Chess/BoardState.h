@@ -28,6 +28,7 @@ public:
 	bool IsPositionInCheck(Color color) const;
 
 	const ChessMove* LastMove() const;
+	std::vector<std::unique_ptr<ChessMove>> GetAllLegalMovesForPiece(Piece* piece) const;
 private:
 	bool IsMovePositionLegal(ChessMove* move) const;
 

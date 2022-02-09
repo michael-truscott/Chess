@@ -29,6 +29,9 @@ ChessGameScene::ChessGameScene(SDL_Renderer* renderer) :
 	m_turnImages[(int)Color::WHITE] = AssetLoader::LoadTextureFile("assets/images/white_turn.png");
 	m_turnImages[(int)Color::BLACK] = AssetLoader::LoadTextureFile("assets/images/black_turn.png");
 
+	m_moveDot = AssetLoader::LoadTextureFile("assets/images/move_dot.png");
+	//SDL_SetTextureAlphaMod(m_moveDot, 192);
+
 	ResetBoard();
 }
 
@@ -38,7 +41,7 @@ void ChessGameScene::Update(float dt)
 
 	if (Input::KeyPressed(SDL_SCANCODE_R)) {
 		ResetBoard();
-		m_selectedPiece = nullptr;
+		SelectPiece(nullptr);
 	}
 	if (Input::KeyPressed(SDL_SCANCODE_F)) {
 		FlipView();
@@ -55,34 +58,45 @@ void ChessGameScene::HandleMouse()
 	if (Input::MouseButtonPressed(SDL_BUTTON_LEFT)) {
 		SDL_Rect boardRect{ BOARD_X_OFFSET, BOARD_Y_OFFSET, SQUARE_SIZE * 8, SQUARE_SIZE * 8 };
 		if (!SDL_PointInRect(&mouse, &boardRect)) {
-			m_selectedPiece = nullptr;
+			SelectPiece(nullptr);
 			return;
 		}
 		Rank rank;
 		File file;
 		ScreenCoordsToRankAndFile(mouse.x, mouse.y, &rank, &file);
-		Piece* targetPiece = m_boardState.GetPieceAt(rank, file);
+		Piece* clickedPiece = m_boardState.GetPieceAt(rank, file);
 
 		if (m_selectedPiece) {
-			if (targetPiece == m_selectedPiece) {
-				m_selectedPiece = nullptr;
+			if (clickedPiece == m_selectedPiece) {
+				SelectPiece(nullptr);
 			}
-			else if (targetPiece && targetPiece->color == m_selectedPiece->color) {
-				m_selectedPiece = targetPiece;
+			else if (clickedPiece && clickedPiece->color == m_selectedPiece->color) {
+				SelectPiece(clickedPiece);
 			}
 			else {
 				if (m_boardState.MovePiece(m_selectedPiece, rank, file)) {
-					m_selectedPiece = nullptr;
+					SelectPiece(nullptr);
 				}
 			}
 		}
 		else {
-			if (targetPiece != nullptr) {
-				if (targetPiece->color == m_boardState.CurrentTurn()) 
-					m_selectedPiece = targetPiece;
+			if (clickedPiece != nullptr) {
+				if (clickedPiece->color == m_boardState.CurrentTurn()) 
+					SelectPiece(clickedPiece);
 			}
 		}
 	}
+}
+
+void ChessGameScene::SelectPiece(Piece* piece)
+{
+	m_selectedPiece = piece;
+	if (piece == nullptr) {
+		m_legalMoves.clear();
+		return;
+	}
+
+	m_legalMoves = m_boardState.GetAllLegalMovesForPiece(m_selectedPiece);
 }
 
 void ChessGameScene::ResetBoard()
@@ -105,6 +119,15 @@ void ChessGameScene::ScreenCoordsToRankAndFile(int screenX, int screenY, Rank* r
 		*rank = (Rank)(7 - ((screenY - BOARD_Y_OFFSET) / SQUARE_SIZE));
 		*file = (File)((screenX - BOARD_X_OFFSET) / SQUARE_SIZE);
 	}
+}
+
+void ChessGameScene::RankAndFileToScreenCoords(Rank rank, File file, int* screenX, int* screenY)
+{
+	// return the top-left pixel of the square
+	int rankInt = m_flipView ? (int)rank : (7 - (int)rank);
+	int fileInt = m_flipView ? (7 - (int)file) : (int)file;
+	*screenX = BOARD_X_OFFSET + SQUARE_SIZE * fileInt;
+	*screenY = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
 }
 
 void ChessGameScene::Render()
@@ -145,6 +168,11 @@ void ChessGameScene::Render()
 		
 		DrawPiece(piece.get());
 	}
+
+	if (!m_legalMoves.empty()) {
+		for (auto& move : m_legalMoves)
+			DrawMoveDot(move.get());
+	}
 }
 
 void ChessGameScene::DrawBoard()
@@ -171,11 +199,8 @@ void ChessGameScene::DrawBoard()
 
 void ChessGameScene::DrawPiece(Piece* piece)
 {
-	int translatedFile = m_flipView ? (7 - (int)piece->file) : (int)piece->file;
-	int translatedRank = m_flipView ? (int)piece->rank : (7 - (int)piece->rank);
-	int x = BOARD_X_OFFSET + SQUARE_SIZE * translatedFile;
-	int y = BOARD_Y_OFFSET + SQUARE_SIZE * translatedRank;
-
+	int x, y;
+	RankAndFileToScreenCoords(piece->rank, piece->file, &x, &y);
 	SDL_Rect rect{ x, y, 64, 64 };
 	SDL_Texture* texture = piece->color == Color::WHITE ? m_whitePieceImages[(int)piece->type] : m_blackPieceImages[(int)piece->type];
 	SDL_RenderCopy(m_renderer, texture, NULL, &rect);
@@ -183,10 +208,22 @@ void ChessGameScene::DrawPiece(Piece* piece)
 
 void ChessGameScene::DrawSquareHighlight(Rank rank, File file)
 {
-	int rankInt = m_flipView ? (int)rank : (7 - (int)rank);
-	int fileInt = m_flipView ? (7 - (int)file) : (int)file;
-	int x = BOARD_X_OFFSET + SQUARE_SIZE * fileInt;
-	int y = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
+	int x, y;
+	RankAndFileToScreenCoords(rank, file, &x, &y);
 	SDL_Rect rect{ x, y, 64, 64 };
 	SDL_RenderFillRect(m_renderer, &rect);
 }
+
+void ChessGameScene::DrawMoveDot(ChessMove *move)
+{
+	int x, y;
+	RankAndFileToScreenCoords(move->newRank, move->newFile, &x, &y);
+	SDL_Rect rect{ x, y, 64, 64 };
+	if (move->type == ChessMoveType::CAPTURE)
+		SDL_SetTextureColorMod(m_moveDot, 255, 0, 0);
+	else
+		SDL_SetTextureColorMod(m_moveDot, 0, 255, 0);
+
+	SDL_RenderCopy(m_renderer, m_moveDot, NULL, &rect);
+}
+
