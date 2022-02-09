@@ -37,8 +37,10 @@ ChessGameScene::ChessGameScene(SDL_Renderer* renderer) :
 
 void ChessGameScene::Update(float dt)
 {
-	HandleMouse();
-
+	if (!m_boardState.CurrentPlayerInCheckmate()) {
+		HandleMouse();
+	}
+	
 	if (Input::KeyPressed(SDL_SCANCODE_R)) {
 		ResetBoard();
 		SelectPiece(nullptr);
@@ -157,9 +159,15 @@ void ChessGameScene::Render()
 			SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 192);
 			DrawSquareHighlight(piece->rank, piece->file);
 		}
-		else if (piece->type == PieceType::KING && piece->color == m_boardState.CurrentTurn() && m_boardState.CurrentPlayerInCheck()) {
-			SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
-			DrawSquareHighlight(piece->rank, piece->file);
+		else if (piece->type == PieceType::KING && piece->color == m_boardState.CurrentTurn()) {
+			if (m_boardState.CurrentPlayerInCheckmate()) {
+				// TODO: better checkmate indicator
+				SDL_SetRenderDrawColor(m_renderer, 255, 0, 255, 255);
+				DrawSquareHighlight(piece->rank, piece->file);
+			} else if (m_boardState.CurrentPlayerInCheck()) {
+				SDL_SetRenderDrawColor(m_renderer, 255, 0, 0, 255);
+				DrawSquareHighlight(piece->rank, piece->file);
+			}
 		}
 		
 		DrawPiece(piece.get());

@@ -161,8 +161,8 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 
 			// TODO: allow underpromotion (dialog prompt?), make this check less shitty and duplicated
 			if (piece->type == PieceType::PAWN &&
-				(piece->color == Color::WHITE && newRank == Rank::R8) ||
-				(piece->color == Color::BLACK && newRank == Rank::R1))
+				(piece->color == Color::WHITE && newRank == Rank::R8 ||
+				piece->color == Color::BLACK && newRank == Rank::R1))
 			{
 				move->isPromotion = true;
 				move->promoteType = PieceType::QUEEN;
@@ -204,8 +204,8 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 	move->newFile = newFile;
 
 	if (piece->type == PieceType::PAWN &&
-		(piece->color == Color::WHITE && newRank == Rank::R8) ||
-		(piece->color == Color::BLACK && newRank == Rank::R1))
+		(piece->color == Color::WHITE && newRank == Rank::R8 ||
+		piece->color == Color::BLACK && newRank == Rank::R1))
 	{
 		move->isPromotion = true;
 		move->promoteType = PieceType::QUEEN;
@@ -328,8 +328,11 @@ bool BoardState::IsPositionInCheck(Color color) const
 
 bool BoardState::IsPositionInCheckmate(Color color) const
 {
-	// TODO:
-	return false;
+	for (auto& piece : m_pieces) {
+		if (piece->color == color && !GetAllLegalMovesForPiece(piece.get()).empty())
+			return false;
+	}
+	return true;
 }
 
 const ChessMove* BoardState::LastMove() const
@@ -383,10 +386,10 @@ bool BoardState::IsMovePositionLegal(ChessMove* move) const
 				return true;
 		}
 		else {
-			if ((fileDelta == 0 && rankDelta == oneSpace) ||
-				(!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces)) {
+			if (fileDelta == 0 && rankDelta == oneSpace)
 				return true;
-			}
+			if (!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces && IsPathClear(move->piece, move->newRank, move->newFile))
+				return true;
 		}
 		break;
 	}
