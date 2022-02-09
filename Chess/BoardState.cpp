@@ -101,12 +101,6 @@ bool BoardState::MovePiece(Piece* piece, Rank newRank, File newFile)
 		return false;
 
 	ApplyMove(move.get());
-
-	if (IsPositionInCheck(piece->color)) {
-		UnapplyMove(move.get());
-		return false;
-	}
-
 	m_moveHistory.push_back(std::move(move));
 	NextTurn();
 	return true;
@@ -114,72 +108,14 @@ bool BoardState::MovePiece(Piece* piece, Rank newRank, File newFile)
 
 bool BoardState::IsMoveLegal(ChessMove* move) const
 {
-	// TODO:
-	// - Checkmate detection
-	// - Pawns: en passant
-	int rankDelta = (int)move->newRank - (int)move->oldRank;
-	int fileDelta = (int)move->newFile - (int)move->oldFile;
-	int absRankDelta = std::abs(rankDelta);
-	int absFileDelta = std::abs(fileDelta);
-	
-	switch (move->piece->type) {
-	case PieceType::PAWN:
-	{
-		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
-		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
-		if ((fileDelta == 0 && rankDelta == oneSpace) ||
-			(!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces)) {
-			return true;
-		}
+	if (!IsMovePositionLegal(move))
+		return false;
 
-		if (move->type == ChessMoveType::CAPTURE) {
-			if (rankDelta == oneSpace && absFileDelta == 1)
-				return true;
-		}
-		break;
-	}
-	case PieceType::KNIGHT:
-	{
-		if (absRankDelta == 1 && absFileDelta == 2 ||
-			absRankDelta == 2 && absFileDelta == 1)
-			return true;
-		break;
-	}
-	case PieceType::BISHOP:
-	{
-		if (absRankDelta == absFileDelta && IsPathClear(move->piece, move->newRank, move->newFile))
-			return true;
-		break;
-	}
-	case PieceType::ROOK:
-	{
-		if ((absRankDelta == 0 && absFileDelta != 0 ||
-			absRankDelta != 0 && absFileDelta == 0) &&
-			IsPathClear(move->piece, move->newRank, move->newFile))
-			return true;
-		break;
-	}
-	case PieceType::QUEEN:
-		if ((absRankDelta == 0 && absFileDelta != 0 ||
-			absRankDelta != 0 && absFileDelta == 0 ||
-			absRankDelta == absFileDelta) &&
-			IsPathClear(move->piece, move->newRank, move->newFile))
-			return true;
-		break;
-	case PieceType::KING:
-		if (absFileDelta <= 1 && absRankDelta <= 1)
-			return true;
+	ApplyMove(move);
+	bool legal = !IsPositionInCheck(move->piece->color);
+	UnapplyMove(move);
 
-		if (move->type == ChessMoveType::CASTLE) {
-			if (move->piece->hasMoved || !move->extra.castleData.rook || move->extra.castleData.rook->hasMoved)
-				return false;
-			
-			if (move->newRank == move->oldRank && (move->newFile == File::G || move->newFile == File::C))
-				return true;
-		}
-		break;
-	}
-	return false;
+	return legal;
 }
 
 void BoardState::RemovePiece(Piece* piece)
@@ -393,6 +329,76 @@ const ChessMove* BoardState::LastMove() const
 	return m_moveHistory.back().get();
 }
 
+bool BoardState::IsMovePositionLegal(ChessMove* move) const
+{
+	// TODO:
+	// - Checkmate detection
+	// - Pawns: en passant
+	int rankDelta = (int)move->newRank - (int)move->oldRank;
+	int fileDelta = (int)move->newFile - (int)move->oldFile;
+	int absRankDelta = std::abs(rankDelta);
+	int absFileDelta = std::abs(fileDelta);
+
+	switch (move->piece->type) {
+	case PieceType::PAWN:
+	{
+		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
+		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
+		if ((fileDelta == 0 && rankDelta == oneSpace) ||
+			(!move->piece->hasMoved && fileDelta == 0 && rankDelta == twoSpaces)) {
+			return true;
+		}
+
+		if (move->type == ChessMoveType::CAPTURE) {
+			if (rankDelta == oneSpace && absFileDelta == 1)
+				return true;
+		}
+		break;
+	}
+	case PieceType::KNIGHT:
+	{
+		if (absRankDelta == 1 && absFileDelta == 2 ||
+			absRankDelta == 2 && absFileDelta == 1)
+			return true;
+		break;
+	}
+	case PieceType::BISHOP:
+	{
+		if (absRankDelta == absFileDelta && IsPathClear(move->piece, move->newRank, move->newFile))
+			return true;
+		break;
+	}
+	case PieceType::ROOK:
+	{
+		if ((absRankDelta == 0 && absFileDelta != 0 ||
+			absRankDelta != 0 && absFileDelta == 0) &&
+			IsPathClear(move->piece, move->newRank, move->newFile))
+			return true;
+		break;
+	}
+	case PieceType::QUEEN:
+		if ((absRankDelta == 0 && absFileDelta != 0 ||
+			absRankDelta != 0 && absFileDelta == 0 ||
+			absRankDelta == absFileDelta) &&
+			IsPathClear(move->piece, move->newRank, move->newFile))
+			return true;
+		break;
+	case PieceType::KING:
+		if (absFileDelta <= 1 && absRankDelta <= 1)
+			return true;
+
+		if (move->type == ChessMoveType::CASTLE) {
+			if (move->piece->hasMoved || !move->extra.castleData.rook || move->extra.castleData.rook->hasMoved)
+				return false;
+
+			if (move->newRank == move->oldRank && (move->newFile == File::G || move->newFile == File::C))
+				return true;
+		}
+		break;
+	}
+	return false;
+}
+
 void BoardState::ApplyMove(ChessMove* move)
 {
 	switch (move->type) {
@@ -453,3 +459,12 @@ void BoardState::UnapplyMove(ChessMove* move)
 	}
 }
 
+void BoardState::ApplyMove(ChessMove* move) const
+{
+	const_cast<BoardState*>(this)->ApplyMove(move);
+}
+
+void BoardState::UnapplyMove(ChessMove* move) const
+{
+	const_cast<BoardState*>(this)->UnapplyMove(move);
+}

@@ -29,6 +29,8 @@ public:
 
 	const ChessMove* LastMove() const;
 private:
+	bool IsMovePositionLegal(ChessMove* move) const;
+
 	void RemovePiece(Piece* piece);
 	void NextTurn();
 
@@ -39,7 +41,13 @@ private:
 	void ApplyMove(ChessMove* move);
 	void UnapplyMove(ChessMove* move);
 
-	std::vector<std::unique_ptr<Piece>> m_pieces;
+	// eugh
+	void ApplyMove(ChessMove* move) const;
+	void UnapplyMove(ChessMove* move) const;
+
+	// Declared mutable since IsMoveLegal is conceptually const but needs to temporarily modify the board state in order to
+	// determine whether a move will put the player into check.
+	mutable std::vector<std::unique_ptr<Piece>> m_pieces;
 	Color m_currentTurn;
 
 	std::deque<std::unique_ptr<ChessMove>> m_moveHistory;
