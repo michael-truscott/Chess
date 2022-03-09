@@ -10,6 +10,7 @@ enum class ChessMoveType {
 
 struct CaptureData {
 	Piece* capturedPiece;
+	bool enPassant;
 };
 
 struct CastleData {

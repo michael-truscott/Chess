@@ -22,7 +22,7 @@ public:
 	bool MovePiece(Piece* piece, Rank newRank, File newFile);
 	bool IsMoveLegal(ChessMove* move) const;
 	bool IsMovePromotion(Piece* piece, Rank newRank, File newFile, std::unique_ptr<ChessMove>* outMove);
-	bool IsEnPassantPossible(Piece* piece);
+	bool IsEnPassantPossible(const Piece* piece) const;
 	void ApplyPromoteMove(std::unique_ptr<ChessMove> move);
 	
 	bool IsSquareUnderAttackByColor(Rank rank, File file, Color color) const;

@@ -143,7 +143,7 @@ bool BoardState::IsMovePromotion(Piece* piece, Rank newRank, File newFile, std::
 /// </summary>
 /// <param name="piece"></param>
 /// <returns></returns>
-bool BoardState::IsEnPassantPossible(Piece* piece)
+bool BoardState::IsEnPassantPossible(const Piece* piece) const
 {
 	if (piece->captured || piece->type != PieceType::PAWN)
 		return false;
@@ -189,58 +189,7 @@ void BoardState::NextTurn()
 /// <returns></returns>
 std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank, File newFile) const
 {
-	std::unique_ptr<ChessMove> nullResult = std::unique_ptr<ChessMove>();
-
-	const Piece* occupyingPiece = GetPieceAt(newRank, newFile);
-	if (occupyingPiece) {
-		if (occupyingPiece->color == piece->color)
-			return std::unique_ptr<ChessMove>(); // can't capture a piece of your own colour
-		else {
-			auto move = std::make_unique<ChessMove>();
-			move->type = ChessMoveType::CAPTURE;
-			move->piece = piece;
-			move->oldRank = piece->rank;
-			move->oldFile = piece->file;
-			move->newRank = newRank;
-			move->newFile = newFile;
-			move->extra.captureData.capturedPiece = const_cast<Piece*>(occupyingPiece);
-
-			// TODO: allow underpromotion (dialog prompt?), make this check less shitty and duplicated
-			if (piece->type == PieceType::PAWN &&
-				(piece->color == Color::WHITE && newRank == Rank::R8 ||
-				piece->color == Color::BLACK && newRank == Rank::R1))
-			{
-				move->isPromotion = true;
-				move->promoteType = PieceType::QUEEN;
-			}
-
-			return move;
-		}
-	}
-
-	if (piece->type == PieceType::KING && !piece->hasMoved &&
-		(newRank == Rank::R1 || newRank == Rank::R8) &&
-		(newFile == File::C || newFile == File::G)) {
-		const Piece* rook = nullptr;
-		if (newFile == File::C)
-			rook = GetPieceAt(piece->rank, File::A);
-		else if (newFile == File::G)
-			rook = GetPieceAt(piece->rank, File::H);
-		if (rook && !rook->hasMoved) {
-			auto move = std::make_unique<ChessMove>();
-			move->type = ChessMoveType::CASTLE;
-			move->piece = piece;
-			move->oldRank = piece->rank;
-			move->oldFile = piece->file;
-			move->newRank = newRank;
-			move->newFile = newFile;
-			move->extra.castleData.rook = const_cast<Piece*>(rook);
-			move->extra.castleData.rookOldRank = rook->rank;
-			move->extra.castleData.rookOldFile = rook->file;
-			return move;
-		}
-	}
-
+	// basic move info
 	auto move = std::make_unique<ChessMove>();
 	move->type = ChessMoveType::NORMAL;
 	move->piece = piece;
@@ -249,9 +198,49 @@ std::unique_ptr<ChessMove> BoardState::TryCreateMove(Piece* piece, Rank newRank,
 	move->newRank = newRank;
 	move->newFile = newFile;
 
+	// special cases go here:
+	// is it a capture?
+	const Piece* capturedPiece = GetPieceAt(newRank, newFile);
+	if (capturedPiece) {
+		if (capturedPiece->color == piece->color) { // filter out some silly cases
+			return nullptr;
+		}
+		move->type = ChessMoveType::CAPTURE;
+		move->extra.captureData.capturedPiece = const_cast<Piece*>(capturedPiece);
+	}
+
+	// is it an en passant?
+	int enPassantRankOffset = piece->color == Color::WHITE ? -1 : 1;
+	const Piece* pieceBehindTargetSquare = GetPieceAt((Rank)((int)newRank + enPassantRankOffset), newFile);
+	if (piece->type == PieceType::PAWN && move->type != ChessMoveType::CAPTURE &&
+		pieceBehindTargetSquare != nullptr && IsEnPassantPossible(pieceBehindTargetSquare))
+	{
+		move->type = ChessMoveType::CAPTURE;
+		move->extra.captureData.capturedPiece = const_cast<Piece*>(pieceBehindTargetSquare);
+		move->extra.captureData.enPassant = true;
+	}
+
+	// is it a castle?
+	if (piece->type == PieceType::KING && !piece->hasMoved &&
+		(newRank == Rank::R1 || newRank == Rank::R8) &&
+		(newFile == File::C || newFile == File::G))
+	{
+		const Piece* rook = nullptr;
+		if (newFile == File::C)
+			rook = GetPieceAt(piece->rank, File::A);
+		else if (newFile == File::G)
+			rook = GetPieceAt(piece->rank, File::H);
+		if (rook && !rook->hasMoved) {
+			move->type = ChessMoveType::CASTLE;
+			move->extra.castleData.rook = const_cast<Piece*>(rook);
+			move->extra.castleData.rookOldRank = rook->rank;
+			move->extra.castleData.rookOldFile = rook->file;
+		}
+	}
+
+	// is it a promotion?
 	if (piece->type == PieceType::PAWN &&
-		(piece->color == Color::WHITE && newRank == Rank::R8 ||
-		piece->color == Color::BLACK && newRank == Rank::R1))
+		(piece->color == Color::WHITE && newRank == Rank::R8 || piece->color == Color::BLACK && newRank == Rank::R1))
 	{
 		move->isPromotion = true;
 		move->promoteType = PieceType::QUEEN;
@@ -394,6 +383,10 @@ std::vector<std::unique_ptr<ChessMove>> BoardState::GetAllLegalMovesForPiece(Pie
 	std::vector<std::unique_ptr<ChessMove>> result;
 	for (int rank = (int)Rank::R1; rank <= (int)Rank::R8; rank++) {
 		for (int file = (int)File::A; file <= (int)File::H; file++) {
+			// moving to the same square should never be a legal move but skip it just in case
+			if (rank == (int)piece->rank && file == (int)piece->file)
+				continue;
+
 			auto move = TryCreateMove(piece, (Rank)rank, (File)file);
 			if (move && IsMoveLegal(move.get()))
 				result.push_back(std::move(move));
@@ -414,9 +407,6 @@ const bool BoardState::CurrentPlayerInCheckmate() const
 
 bool BoardState::IsMovePositionLegal(ChessMove* move) const
 {
-	// TODO:
-	// - Checkmate detection
-	// - Pawns: en passant
 	int rankDelta = (int)move->newRank - (int)move->oldRank;
 	int fileDelta = (int)move->newFile - (int)move->oldFile;
 	int absRankDelta = std::abs(rankDelta);
@@ -428,6 +418,7 @@ bool BoardState::IsMovePositionLegal(ChessMove* move) const
 		int oneSpace = move->piece->color == Color::WHITE ? 1 : -1;
 		int twoSpaces = move->piece->color == Color::WHITE ? 2 : -2;
 		if (move->type == ChessMoveType::CAPTURE) {
+			// TODO: double check en passant is legal?
 			if (rankDelta == oneSpace && absFileDelta == 1)
 				return true;
 		}
