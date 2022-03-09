@@ -203,6 +203,10 @@ void ChessGameScene::Render()
 			SDL_SetRenderDrawColor(m_renderer, 0, 255, 0, 192);
 			DrawSquareHighlight(piece->rank, piece->file);
 		}
+		else if (m_boardState.IsEnPassantPossible(piece.get())) {
+			SDL_SetRenderDrawColor(m_renderer, 0, 231, 255, 255);
+			DrawSquareHighlight(piece->rank, piece->file);
+		}
 		else if (piece->type == PieceType::KING && piece->color == m_boardState.CurrentTurn()) {
 			if (m_boardState.CurrentPlayerInCheckmate()) {
 				// TODO: better checkmate indicator

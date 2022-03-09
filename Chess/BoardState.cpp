@@ -138,6 +138,27 @@ bool BoardState::IsMovePromotion(Piece* piece, Rank newRank, File newFile, std::
 	return false;
 }
 
+/// <summary>
+/// Returns true if the given piece is a pawn that just moved 2 squares forward on the previous turn.
+/// </summary>
+/// <param name="piece"></param>
+/// <returns></returns>
+bool BoardState::IsEnPassantPossible(Piece* piece)
+{
+	if (piece->captured || piece->type != PieceType::PAWN)
+		return false;
+
+	if (m_moveHistory.empty())
+		return false;
+
+	ChessMove* lastMove = m_moveHistory.back().get();
+	if (lastMove->piece != piece)
+		return false;
+
+	int rankDelta = std::abs((int)lastMove->newRank - (int)lastMove->oldRank);
+	return rankDelta == 2;
+}
+
 void BoardState::ApplyPromoteMove(std::unique_ptr<ChessMove> move)
 {
 	ApplyMove(move.get());
