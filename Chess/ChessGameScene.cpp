@@ -2,6 +2,7 @@
 #include "AssetLoader.h"
 #include "Input.h"
 #include <iostream>
+#include "globals.h"
 
 constexpr int SQUARE_SIZE = 64;
 constexpr int BOARD_X_OFFSET = 144;
@@ -10,7 +11,8 @@ constexpr int BOARD_Y_OFFSET = 44;
 ChessGameScene::ChessGameScene(SDL_Renderer* renderer) :
 	m_renderer(renderer),
 	m_selectedPiece(nullptr),
-	m_flipView(false)
+	m_flipView(false),
+	m_gameState(GameState::NORMAL)
 {
 	m_whitePieceImages[(int)PieceType::PAWN] = AssetLoader::LoadTextureFile("assets/images/pawn_white.png");
 	m_whitePieceImages[(int)PieceType::KNIGHT] = AssetLoader::LoadTextureFile("assets/images/knight_white.png");
@@ -29,6 +31,8 @@ ChessGameScene::ChessGameScene(SDL_Renderer* renderer) :
 	m_turnImages[(int)Color::WHITE] = AssetLoader::LoadTextureFile("assets/images/white_turn.png");
 	m_turnImages[(int)Color::BLACK] = AssetLoader::LoadTextureFile("assets/images/black_turn.png");
 
+	m_promoteDialog = AssetLoader::LoadTextureFile("assets/images/promote_dialog.png");
+
 	m_moveDot = AssetLoader::LoadTextureFile("assets/images/move_dot.png");
 	//SDL_SetTextureAlphaMod(m_moveDot, 192);
 
@@ -37,20 +41,48 @@ ChessGameScene::ChessGameScene(SDL_Renderer* renderer) :
 
 void ChessGameScene::Update(float dt)
 {
-	if (!m_boardState.CurrentPlayerInCheckmate()) {
-		HandleMouse();
-	}
-	
-	if (Input::KeyPressed(SDL_SCANCODE_R)) {
-		ResetBoard();
-		SelectPiece(nullptr);
-	}
-	if (Input::KeyPressed(SDL_SCANCODE_F)) {
-		FlipView();
-	}
-	if (Input::KeyPressed(SDL_SCANCODE_LEFT)) {
-		m_boardState.Rewind();
-		SelectPiece(nullptr);
+	switch (m_gameState)
+	{
+	case GameState::NORMAL:
+		if (m_boardState.CurrentPlayerInCheckmate()) {
+			m_gameState = GameState::GAME_OVER;
+			break;
+		}
+
+		if (!m_boardState.CurrentPlayerInCheckmate()) {
+			HandleMouse();
+		}
+		if (Input::KeyPressed(SDL_SCANCODE_F)) {
+			FlipView();
+		}
+		if (Input::KeyPressed(SDL_SCANCODE_LEFT)) {
+			m_boardState.Rewind();
+			SelectPiece(nullptr);
+		}
+		break;
+	case GameState::GAME_OVER:
+		if (Input::KeyPressed(SDL_SCANCODE_R)) {
+			ResetBoard();
+			SelectPiece(nullptr);
+		}
+		break;
+	case GameState::PROMOTION_PROMPT:
+		if (Input::KeyPressed(SDL_SCANCODE_1)) {
+			ApplyPromoteMove(PieceType::KNIGHT);
+		}
+		else if (Input::KeyPressed(SDL_SCANCODE_2)) {
+			ApplyPromoteMove(PieceType::BISHOP);
+		}
+		else if (Input::KeyPressed(SDL_SCANCODE_3)) {
+			ApplyPromoteMove(PieceType::ROOK);
+		}
+		else if (Input::KeyPressed(SDL_SCANCODE_4)) {
+			ApplyPromoteMove(PieceType::QUEEN);
+		}
+		else if (Input::KeyPressed(SDL_SCANCODE_ESCAPE)) {
+			m_gameState = GameState::NORMAL;
+		}
+		break;
 	}
 }
 
@@ -77,7 +109,10 @@ void ChessGameScene::HandleMouse()
 				SelectPiece(clickedPiece);
 			}
 			else {
-				if (m_boardState.MovePiece(m_selectedPiece, rank, file)) {
+				if (m_boardState.IsMovePromotion(m_selectedPiece, rank, file, &m_promotionMove)) {
+					m_gameState = GameState::PROMOTION_PROMPT;
+				}
+				else if (m_boardState.MovePiece(m_selectedPiece, rank, file)) {
 					SelectPiece(nullptr);
 				}
 			}
@@ -105,6 +140,7 @@ void ChessGameScene::SelectPiece(Piece* piece)
 void ChessGameScene::ResetBoard()
 {
 	m_boardState.Reset();
+	m_gameState = GameState::NORMAL;
 }
 
 void ChessGameScene::FlipView()
@@ -131,6 +167,14 @@ void ChessGameScene::RankAndFileToScreenCoords(Rank rank, File file, int* screen
 	int fileInt = m_flipView ? (7 - (int)file) : (int)file;
 	*screenX = BOARD_X_OFFSET + SQUARE_SIZE * fileInt;
 	*screenY = BOARD_Y_OFFSET + SQUARE_SIZE * rankInt;
+}
+
+void ChessGameScene::ApplyPromoteMove(PieceType promoteType)
+{
+	m_promotionMove->promoteType = promoteType;
+	m_boardState.ApplyPromoteMove(std::move(m_promotionMove));
+	m_gameState = GameState::NORMAL;
+	SelectPiece(nullptr);
 }
 
 void ChessGameScene::Render()
@@ -176,6 +220,34 @@ void ChessGameScene::Render()
 	if (!m_legalMoves.empty()) {
 		for (auto& move : m_legalMoves)
 			DrawMoveDot(move.get());
+	}
+
+	if (m_gameState == GameState::PROMOTION_PROMPT) {
+		SDL_SetRenderDrawColor(m_renderer, 128, 128, 128, 255);
+		SDL_Rect rect{ 200, 140, 400, 320 };
+		SDL_RenderCopy(m_renderer, m_promoteDialog, nullptr, &rect);
+
+		SDL_Texture* knight = m_boardState.CurrentTurn() == Color::WHITE ? m_whitePieceImages[(int)PieceType::KNIGHT] : m_blackPieceImages[(int)PieceType::KNIGHT];
+		SDL_Texture* bishop = m_boardState.CurrentTurn() == Color::WHITE ? m_whitePieceImages[(int)PieceType::BISHOP] : m_blackPieceImages[(int)PieceType::BISHOP];
+		SDL_Texture* rook = m_boardState.CurrentTurn() == Color::WHITE ? m_whitePieceImages[(int)PieceType::ROOK] : m_blackPieceImages[(int)PieceType::ROOK];
+		SDL_Texture* queen = m_boardState.CurrentTurn() == Color::WHITE ? m_whitePieceImages[(int)PieceType::QUEEN] : m_blackPieceImages[(int)PieceType::QUEEN];
+
+		int x = rect.x + 18;
+		int y = 256;
+		rect = { x, y, 64, 64 };
+		SDL_RenderCopy(m_renderer, knight, NULL, &rect);
+
+		x += 100;
+		rect = { x, y, 64, 64 };
+		SDL_RenderCopy(m_renderer, bishop, NULL, &rect);
+
+		x += 100;
+		rect = { x, y, 64, 64 };
+		SDL_RenderCopy(m_renderer, rook, NULL, &rect);
+
+		x += 100;
+		rect = { x, y, 64, 64 };
+		SDL_RenderCopy(m_renderer, queen, NULL, &rect);
 	}
 }
 

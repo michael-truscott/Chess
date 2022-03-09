@@ -9,9 +9,6 @@
 #include "ChessGameScene.h"
 #include "Events.h"
 
-static constexpr int WINDOW_W = 800;
-static constexpr int WINDOW_H = 600;
-
 static constexpr int FRAMES_PER_SEC = 60;
 static constexpr float FRAME_PERIOD = 1 / (float)FRAMES_PER_SEC;
 

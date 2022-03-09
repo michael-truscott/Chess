@@ -6,6 +6,13 @@
 #include "Piece.h"
 #include "BoardState.h"
 
+enum class GameState
+{
+    NORMAL,
+    GAME_OVER,
+    PROMOTION_PROMPT,
+};
+
 class ChessGameScene : public Scene
 {
 public:
@@ -29,6 +36,9 @@ private:
     void ScreenCoordsToRankAndFile(int screenX, int screenY, Rank* rank, File* file);
     void RankAndFileToScreenCoords(Rank rank, File file, int* screenX, int* screenY);
 
+    void ApplyPromoteMove(PieceType promoteType);
+
+    GameState m_gameState;
     BoardState m_boardState;
     
     Piece* m_selectedPiece;
@@ -38,7 +48,10 @@ private:
     std::array<SDL_Texture*, (int)PieceType::MAX> m_whitePieceImages;
     std::array<SDL_Texture*, (int)PieceType::MAX> m_blackPieceImages;
     std::array<SDL_Texture*, 2> m_turnImages;
+    SDL_Texture* m_promoteDialog;
 
     SDL_Texture* m_moveDot;
+
+    std::unique_ptr<ChessMove> m_promotionMove;
 };
 

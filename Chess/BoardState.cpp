@@ -120,6 +120,31 @@ bool BoardState::IsMoveLegal(ChessMove* move) const
 	return legal;
 }
 
+/// <summary>
+/// Check if the prospective move will require the player to select a piece type to promote to
+/// </summary>
+/// <param name="piece"></param>
+/// <param name="newRank"></param>
+/// <param name="newFile"></param>
+/// <returns></returns>
+bool BoardState::IsMovePromotion(Piece* piece, Rank newRank, File newFile, std::unique_ptr<ChessMove>* outMove)
+{
+	auto move = TryCreateMove(piece, newRank, newFile);
+	if (move && IsMoveLegal(move.get()) && move->isPromotion) {
+		// sorry future Michael
+		(*outMove) = std::move(move);
+		return true;
+	}
+	return false;
+}
+
+void BoardState::ApplyPromoteMove(std::unique_ptr<ChessMove> move)
+{
+	ApplyMove(move.get());
+	m_moveHistory.push_back(std::move(move));
+	NextTurn();
+}
+
 void BoardState::RemovePiece(Piece* piece)
 {
 	piece->captured = true;
