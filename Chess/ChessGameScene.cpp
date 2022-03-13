@@ -12,7 +12,8 @@ ChessGameScene::ChessGameScene(SDL_Renderer* renderer) :
 	m_renderer(renderer),
 	m_selectedPiece(nullptr),
 	m_flipView(false),
-	m_gameState(GameState::NORMAL)
+	m_gameState(GameState::NORMAL),
+	m_canUndoMoves(true)
 {
 	m_whitePieceImages[(int)PieceType::PAWN] = AssetLoader::LoadTextureFile("assets/images/pawn_white.png");
 	m_whitePieceImages[(int)PieceType::KNIGHT] = AssetLoader::LoadTextureFile("assets/images/knight_white.png");
@@ -55,7 +56,7 @@ void ChessGameScene::Update(float dt)
 		if (Input::KeyPressed(SDL_SCANCODE_F)) {
 			FlipView();
 		}
-		if (Input::KeyPressed(SDL_SCANCODE_LEFT)) {
+		if (m_canUndoMoves && Input::KeyPressed(SDL_SCANCODE_LEFT)) {
 			m_boardState.Rewind();
 			SelectPiece(nullptr);
 		}
@@ -112,7 +113,7 @@ void ChessGameScene::HandleMouse()
 				if (m_boardState.IsMovePromotion(m_selectedPiece, rank, file, &m_promotionMove)) {
 					m_gameState = GameState::PROMOTION_PROMPT;
 				}
-				else if (m_boardState.MovePiece(m_selectedPiece, rank, file)) {
+				else if (TryMovePiece(m_selectedPiece, rank, file)) {
 					SelectPiece(nullptr);
 				}
 			}
@@ -146,6 +147,11 @@ void ChessGameScene::ResetBoard()
 void ChessGameScene::FlipView()
 {
 	m_flipView = !m_flipView;
+}
+
+bool ChessGameScene::TryMovePiece(Piece* piece, Rank rank, File file)
+{
+	return m_boardState.MovePiece(piece, rank, file);
 }
 
 void ChessGameScene::ScreenCoordsToRankAndFile(int screenX, int screenY, Rank* rank, File* file)

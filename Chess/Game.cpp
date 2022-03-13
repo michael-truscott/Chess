@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string.h>
+#include <ctime>
 #include "globals.h"
 #include "Input.h"
 #include "AssetLoader.h"
@@ -36,26 +37,36 @@ Game::~Game()
 
 void Game::Run()
 {
-	m_prevTime = SDL_GetPerformanceCounter();
-	while (!m_finished)
-	{
-		Uint64 currentTime = SDL_GetPerformanceCounter();
-		float dt = (currentTime - m_prevTime) / (float)SDL_GetPerformanceFrequency();
-		m_prevTime = currentTime;
-		m_currentFrameTime += dt;
-		while (m_currentFrameTime > 0) {
-			Update(FRAME_PERIOD);
-			m_currentFrameTime -= FRAME_PERIOD;
-		}
-		Render();
+	try {
+		m_prevTime = SDL_GetPerformanceCounter();
+		while (!m_finished)
+		{
+			Uint64 currentTime = SDL_GetPerformanceCounter();
+			float dt = (currentTime - m_prevTime) / (float)SDL_GetPerformanceFrequency();
+			m_prevTime = currentTime;
+			m_currentFrameTime += dt;
+			while (m_currentFrameTime > 0) {
+				Update(FRAME_PERIOD);
+				m_currentFrameTime -= FRAME_PERIOD;
+			}
+			Render();
 
-		// try not to hammer the cpu at full throttle, still roughly 100 frames/sec
-		SDL_Delay(10);
+			// try not to hammer the cpu at full throttle, still roughly 100 frames/sec
+			SDL_Delay(10);
+		}
+	}
+	catch (std::exception& ex) {
+		if (SDL_WasInit(SDL_INIT_VIDEO) == SDL_INIT_VIDEO) {
+			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", ex.what(), NULL);
+		}
+		std::cout << "Error: " << ex.what() << std::endl;
 	}
 }
 
 void Game::Init()
 {
+	srand(time(NULL));
+
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0)
 		throw std::runtime_error("SDL video init failed");
 

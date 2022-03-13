@@ -154,24 +154,30 @@
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NetServerChessGameScene.cpp" />
+    <ClCompile Include="PacketBuffer.cpp" />
     <ClCompile Include="Piece.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneManager.cpp" />
+    <ClCompile Include="TcpServer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AssetLoader.h" />
     <ClInclude Include="BoardState.h" />
     <ClInclude Include="ChessGameScene.h" />
     <ClInclude Include="ChessMove.h" />
+    <ClInclude Include="ClientInfo.h" />
     <ClInclude Include="Events.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="GamePacket.h" />
     <ClInclude Include="globals.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="ISceneChanger.h" />
     <ClInclude Include="NetServerChessGameScene.h" />
+    <ClInclude Include="PacketBuffer.h" />
     <ClInclude Include="Piece.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
+    <ClInclude Include="TcpServer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

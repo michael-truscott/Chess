@@ -49,3 +49,7 @@ struct Piece {
     bool captured;
     bool hasMoved;
 };
+
+char RankToChar(Rank rank);
+char FileToChar(File file);
+const char* PieceTypeToString(PieceType piece);

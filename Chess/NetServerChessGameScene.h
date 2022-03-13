@@ -1,5 +1,6 @@
 #pragma once
 #include "ChessGameScene.h"
+#include "TcpServer.h"
 
 // TODO: extend ChessGameScene to work with a network-connected client playing the other player's moves
 // e.g.
@@ -12,5 +13,20 @@ class NetServerChessGameScene : public ChessGameScene
 {
 public:
 	NetServerChessGameScene(SDL_Renderer* renderer);
+
+	virtual void Update(float dt) override;
+	virtual void Render() override;
+
+protected:
+	virtual bool TryMovePiece(Piece* piece, Rank rank, File file) override;
+	virtual void ApplyPromoteMove(PieceType promoteType) override;
+	virtual void SelectPiece(Piece* piece) override;
+
+private:
+	void ProcessPacket(GamePacket* packet);
+
+	TcpServer m_server;
+	Color m_serverColor;
+	bool m_gameStarted;
 };
 
