@@ -78,6 +78,7 @@ void NetServerChessGameScene::ProcessPacket(GamePacket* packet)
 		if (m_serverColor == Color::BLACK) {
 			m_flipView = true;
 		}
+		printf("Received Connect message from client, assigning them the color %s\n", m_serverColor == Color::WHITE ? "black" : "white");
 		m_server.AssignClientColor(m_serverColor == Color::WHITE ? Color::BLACK : Color::WHITE);
 		break;
 	}

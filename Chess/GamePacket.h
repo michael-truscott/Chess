@@ -55,4 +55,10 @@ struct GamePacket {
 	GamePacketData Data;
 };
 
+void CreateConnectPacket(GamePacket* packet);
+void CreateAssignColorPacket(GamePacket* packet, Color color);
+void CreateMovePacket(GamePacket* packet, Rank srcRank, File srcFile, Rank dstRank, File dstFile);
+void CreatePromoteMovePacket(GamePacket* packet, Rank srcRank, File srcFile, Rank dstRank, File dstFile, PieceType promoteType);
+void CreateMoveAckPacket(GamePacket* packet, bool accepted);
+
 #pragma pack(pop, r1)

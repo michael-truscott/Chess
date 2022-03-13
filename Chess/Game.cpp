@@ -11,6 +11,7 @@
 #include "AssetLoader.h"
 #include "ChessGameScene.h"
 #include "NetServerChessGameScene.h"
+#include "NetClientChessGameScene.h"
 #include "Events.h"
 
 static constexpr int FRAMES_PER_SEC = 60;
@@ -37,29 +38,21 @@ Game::~Game()
 
 void Game::Run()
 {
-	try {
-		m_prevTime = SDL_GetPerformanceCounter();
-		while (!m_finished)
-		{
-			Uint64 currentTime = SDL_GetPerformanceCounter();
-			float dt = (currentTime - m_prevTime) / (float)SDL_GetPerformanceFrequency();
-			m_prevTime = currentTime;
-			m_currentFrameTime += dt;
-			while (m_currentFrameTime > 0) {
-				Update(FRAME_PERIOD);
-				m_currentFrameTime -= FRAME_PERIOD;
-			}
-			Render();
+	m_prevTime = SDL_GetPerformanceCounter();
+	while (!m_finished)
+	{
+		Uint64 currentTime = SDL_GetPerformanceCounter();
+		float dt = (currentTime - m_prevTime) / (float)SDL_GetPerformanceFrequency();
+		m_prevTime = currentTime;
+		m_currentFrameTime += dt;
+		while (m_currentFrameTime > 0) {
+			Update(FRAME_PERIOD);
+			m_currentFrameTime -= FRAME_PERIOD;
+		}
+		Render();
 
-			// try not to hammer the cpu at full throttle, still roughly 100 frames/sec
-			SDL_Delay(10);
-		}
-	}
-	catch (std::exception& ex) {
-		if (SDL_WasInit(SDL_INIT_VIDEO) == SDL_INIT_VIDEO) {
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Error", ex.what(), NULL);
-		}
-		std::cout << "Error: " << ex.what() << std::endl;
+		// try not to hammer the cpu at full throttle, still roughly 100 frames/sec
+		SDL_Delay(10);
 	}
 }
 
@@ -102,8 +95,16 @@ void Game::Init()
 	}
 	else if (m_argc >= 2 && strcmp(m_argv[1], "-connect") == 0) {
 		// TODO: NetClientChessGameScene
-		printf("Net client mode is not yet implemented, exiting...\n");
-		m_finished = true;
+		const char* serverName;
+		if (m_argc >= 3) {
+			serverName = m_argv[2];
+			printf("Launching in net client mode - serverName: %s\n", serverName);
+			m_sceneManager.LoadScene(std::make_unique<NetClientChessGameScene>(m_renderer, serverName));
+		}
+		else {
+			printf("Please specify a server to connect to e.g. \"Chess.exe -connect 192.168.0.5\"\n");
+			m_finished = true;
+		}
 	}
 	else {
 		printf("Launching in local play mode\n");

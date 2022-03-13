@@ -10,6 +10,11 @@ TcpServer::TcpServer() :
 {
 }
 
+TcpServer::~TcpServer()
+{
+	Shutdown();
+}
+
 bool TcpServer::Init()
 {
 	if (SDLNet_ResolveHost(&m_address, nullptr, SERVER_PORT) != 0) {
@@ -106,10 +111,7 @@ void TcpServer::GetNextClientMessage(GamePacket* outPacket)
 void TcpServer::AssignClientColor(Color color)
 {
 	GamePacket packet;
-	memset(&packet, 0, sizeof(packet));
-	packet.Header.Type = GamePacketType::AssignColor;
-	packet.Header.Length = sizeof(AssignColorData);
-	packet.Data.AssignColor.Color = color;
+	CreateAssignColorPacket(&packet, color);
 	SendToClient(&packet);
 
 	m_client.Color = color;
@@ -124,39 +126,21 @@ Color TcpServer::GetClientColor()
 void TcpServer::SendMoveAckToClient(bool accepted)
 {
 	GamePacket packet;
-	memset(&packet, 0, sizeof(packet));
-	packet.Header.Type = GamePacketType::MoveAck;
-	packet.Header.Length = sizeof(MoveAckData);
-	packet.Data.MoveAck.Accepted = accepted;
+	CreateMoveAckPacket(&packet, accepted);
 	SendToClient(&packet);
 }
 
 void TcpServer::SendMoveToClient(Rank srcRank, File srcFile, Rank dstRank, File dstFile)
 {
 	GamePacket packet;
-	memset(&packet, 0, sizeof(packet));
-	packet.Header.Type = GamePacketType::Move;
-	packet.Header.Length = sizeof(MoveData);
-	packet.Data.Move.SrcRank = srcRank;
-	packet.Data.Move.SrcFile = srcFile;
-	packet.Data.Move.DstRank = dstRank;
-	packet.Data.Move.DstFile = dstFile;
-	packet.Data.Move.IsPromotion = false;
+	CreateMovePacket(&packet, srcRank, srcFile, dstRank, dstFile);
 	SendToClient(&packet);
 }
 
 void TcpServer::SendPromoteMoveToClient(Rank srcRank, File srcFile, Rank dstRank, File dstFile, PieceType promoteType)
 {
 	GamePacket packet;
-	memset(&packet, 0, sizeof(packet));
-	packet.Header.Type = GamePacketType::Move;
-	packet.Header.Length = sizeof(MoveData);
-	packet.Data.Move.SrcRank = srcRank;
-	packet.Data.Move.SrcFile = srcFile;
-	packet.Data.Move.DstRank = dstRank;
-	packet.Data.Move.DstFile = dstFile;
-	packet.Data.Move.IsPromotion = true;
-	packet.Data.Move.PromotionType = promoteType;
+	CreatePromoteMovePacket(&packet, srcRank, srcFile, dstRank, dstFile, promoteType);
 	SendToClient(&packet);
 }
 

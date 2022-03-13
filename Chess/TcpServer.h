@@ -3,18 +3,16 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
-#include <SDL_net.h>
+#include "TcpCommon.h"
 #include "ClientInfo.h"
 #include "GamePacket.h"
 #include "PacketBuffer.h"
-
-constexpr Uint16 SERVER_PORT = 9001;
-constexpr int BUFFER_SIZE = 1024;
 
 class TcpServer
 {
 public:
 	TcpServer();
+	~TcpServer();
 
 	bool Init();
 	void Shutdown();
