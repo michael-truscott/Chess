@@ -4,7 +4,7 @@
 int main(int argc, char** argv) {
 	try
 	{
-		Game game;
+		Game game(argc, argv);
 		game.Run();
 	}
 	catch (std::exception& ex) {

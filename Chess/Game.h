@@ -6,7 +6,7 @@
 class Game
 {
 public:
-	Game();
+	Game(int argc, char** argv);
 	~Game();
 
 	void Run();
@@ -17,6 +17,9 @@ private:
 
 	void Update(float dt);
 	void Render();
+
+	int m_argc;
+	char** m_argv;
 
 	bool m_finished;
 	Uint64 m_prevTime;

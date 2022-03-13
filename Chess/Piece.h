@@ -1,6 +1,8 @@
 #pragma once
 
-enum class PieceType {
+#include <cstdint>
+
+enum class PieceType : uint8_t {
     PAWN,
     KNIGHT,
     BISHOP,
@@ -10,12 +12,12 @@ enum class PieceType {
     MAX,
 };
 
-enum class Color {
+enum class Color : uint8_t {
     WHITE,
     BLACK,
 };
 
-enum class Rank {
+enum class Rank : uint8_t {
     R1,
     R2,
     R3,
@@ -26,7 +28,7 @@ enum class Rank {
     R8,
 };
 
-enum class File {
+enum class File : uint8_t {
     A,
     B,
     C,

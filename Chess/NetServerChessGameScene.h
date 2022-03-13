@@ -10,5 +10,7 @@
 // - On receiving a move from the client, check it's a legal move, if so, apply it to the board state and send a MoveAck back
 class NetServerChessGameScene : public ChessGameScene
 {
+public:
+	NetServerChessGameScene(SDL_Renderer* renderer);
 };
 

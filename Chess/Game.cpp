@@ -4,16 +4,20 @@
 #include <SDL_net.h>
 #include <cstdlib>
 #include <iostream>
+#include <string.h>
 #include "globals.h"
 #include "Input.h"
 #include "AssetLoader.h"
 #include "ChessGameScene.h"
+#include "NetServerChessGameScene.h"
 #include "Events.h"
 
 static constexpr int FRAMES_PER_SEC = 60;
 static constexpr float FRAME_PERIOD = 1 / (float)FRAMES_PER_SEC;
 
-Game::Game() :
+Game::Game(int argc, char** argv) :
+	m_argc(argc),
+	m_argv(argv),
 	m_finished(false),
 	m_prevTime(0),
 	m_currentFrameTime(0),
@@ -81,7 +85,19 @@ void Game::Init()
 	Input::Init();
 	Events::Init();
 	
-	m_sceneManager.LoadScene(std::make_unique<ChessGameScene>(m_renderer));
+	if (m_argc >= 2 && strcmp(m_argv[1], "-server") == 0) {
+		printf("Launching in net server mode\n");
+		m_sceneManager.LoadScene(std::make_unique<NetServerChessGameScene>(m_renderer));
+	}
+	else if (m_argc >= 2 && strcmp(m_argv[1], "-connect") == 0) {
+		// TODO: NetClientChessGameScene
+		printf("Net client mode is not yet implemented, exiting...\n");
+		m_finished = true;
+	}
+	else {
+		printf("Launching in local play mode\n");
+		m_sceneManager.LoadScene(std::make_unique<ChessGameScene>(m_renderer));
+	}
 }
 
 void Game::Shutdown()
