@@ -1,6 +1,7 @@
 #include "Game.h"
 #include <stdexcept>
 #include <SDL_image.h>
+#include <SDL_net.h>
 #include <cstdlib>
 #include <iostream>
 #include "globals.h"
@@ -70,6 +71,10 @@ void Game::Init()
 	if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG))
 		throw std::runtime_error("SDLImage init failed");
 
+	if (SDLNet_Init() != 0) {
+		throw std::runtime_error("SDLNet_Init failed");
+	}
+
 	/*if (TTF_Init() < 0)
 		throw std::runtime_error("SDL_ttf init failed");*/
 
@@ -92,6 +97,7 @@ void Game::Shutdown()
 
 	AssetLoader::Shutdown();
 
+	SDLNet_Quit();
 	IMG_Quit();
 	SDL_Quit();
 }
