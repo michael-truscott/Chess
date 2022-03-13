@@ -153,6 +153,7 @@
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="Input.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="NetServerChessGameScene.cpp" />
     <ClCompile Include="Piece.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneManager.cpp" />
@@ -167,6 +168,7 @@
     <ClInclude Include="globals.h" />
     <ClInclude Include="Input.h" />
     <ClInclude Include="ISceneChanger.h" />
+    <ClInclude Include="NetServerChessGameScene.h" />
     <ClInclude Include="Piece.h" />
     <ClInclude Include="Scene.h" />
     <ClInclude Include="SceneManager.h" />
