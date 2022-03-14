@@ -1,5 +1,6 @@
 #include "NetClientChessGameScene.h"
 #include <stdexcept>
+#include <string>
 
 NetClientChessGameScene::NetClientChessGameScene(SDL_Renderer* renderer, const char* serverName) :
 	ChessGameScene::ChessGameScene(renderer),

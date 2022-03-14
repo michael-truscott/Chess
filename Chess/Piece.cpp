@@ -20,6 +20,7 @@ char RankToChar(Rank rank) {
 	case Rank::R6: return '6';
 	case Rank::R7: return '7';
 	case Rank::R8: return '8';
+	default: return '\0';
 	}
 }
 
@@ -33,6 +34,7 @@ char FileToChar(File file) {
 	case File::F: return 'f';
 	case File::G: return 'g';
 	case File::H: return 'h';
+	default: return '\0';
 	}
 }
 
@@ -44,5 +46,6 @@ const char* PieceTypeToString(PieceType piece) {
 	case PieceType::ROOK: return "rook";
 	case PieceType::QUEEN: return "queen";
 	case PieceType::KING: return "king";
+	default: return "(unknown)";
 	}
 }

@@ -49,10 +49,13 @@ bool TcpClient::Connect(const char* serverName)
 
 void TcpClient::Shutdown()
 {
-	if (SDLNet_TCP_DelSocket(m_socketSet, m_socket) == -1) {
-		printf("Error deleting client socket: %s\n", SDLNet_GetError());
+	if (m_socket != NULL) {
+		if (SDLNet_TCP_DelSocket(m_socketSet, m_socket) == -1) {
+			printf("Error deleting client socket: %s\n", SDLNet_GetError());
+		}
+		SDLNet_TCP_Close(m_socket);
 	}
-	SDLNet_TCP_Close(m_socket);
+	
 	SDLNet_FreeSocketSet(m_socketSet);
 }
 

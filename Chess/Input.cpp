@@ -31,8 +31,8 @@ namespace Input {
 		const Uint8* tempBuf = SDL_GetKeyboardState(&keyBufferSize);
 		keyBuffer = std::unique_ptr<Uint8[]>(new Uint8[keyBufferSize]);
 		prevKeyBuffer = std::unique_ptr<Uint8[]>(new Uint8[keyBufferSize]);
-		memcpy_s(keyBuffer.get(), keyBufferSize, tempBuf, keyBufferSize);
-		memcpy_s(prevKeyBuffer.get(), keyBufferSize, tempBuf, keyBufferSize);
+		memcpy(keyBuffer.get(), tempBuf, keyBufferSize);
+		memcpy(prevKeyBuffer.get(), tempBuf, keyBufferSize);
 
 		if (SDL_NumJoysticks() > 0) {
 			joystick = SDL_JoystickOpen(0);
@@ -62,13 +62,13 @@ namespace Input {
 	}
 
 	void Update() {
-		memcpy_s(prevKeyBuffer.get(), keyBufferSize, keyBuffer.get(), keyBufferSize);
+		memcpy(prevKeyBuffer.get(), keyBuffer.get(), keyBufferSize);
 
 		const Uint8* tempBuf = SDL_GetKeyboardState(&keyBufferSize);
-		memcpy_s(keyBuffer.get(), keyBufferSize, tempBuf, keyBufferSize);
+		memcpy(keyBuffer.get(), tempBuf, keyBufferSize);
 
 		SDL_JoystickUpdate();
-		memcpy_s(prevJoystickButtons.get(), joystickButtonCount, joystickButtons.get(), joystickButtonCount);
+		memcpy(prevJoystickButtons.get(), joystickButtons.get(), joystickButtonCount);
 		for (int i = 0; i < joystickButtonCount; i++) {
 			joystickButtons[i] = SDL_JoystickGetButton(joystick, i);
 		}

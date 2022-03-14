@@ -58,7 +58,7 @@ void Game::Run()
 
 void Game::Init()
 {
-	srand(time(NULL));
+	srand((uint32_t)time(NULL));
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0)
 		throw std::runtime_error("SDL video init failed");
