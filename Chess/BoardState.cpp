@@ -466,6 +466,9 @@ bool BoardState::IsMovePositionLegal(ChessMove* move) const
 			if (move->piece->hasMoved || !move->extra.castleData.rook || move->extra.castleData.rook->hasMoved)
 				return false;
 
+			if (IsPositionInCheck(move->piece->color))
+				return false;
+
 			if (move->newRank == move->oldRank && (move->newFile == File::G || move->newFile == File::C))
 				return true;
 		}
