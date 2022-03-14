@@ -116,7 +116,7 @@ void NetServerChessGameScene::ProcessPacket(GamePacket* packet)
 			}
 
 			promoteMove->promoteType = packet->Data.Move.PromotionType;
-			m_boardState.ApplyPromoteMove(std::make_unique<ChessMove>());
+			m_boardState.ApplyPromoteMove(std::move(promoteMove));
 			printf("Client sent move: %s (%c%c) to %c%c\n", PieceTypeToString(piece->type),
 				FileToChar(packet->Data.Move.SrcFile), RankToChar(packet->Data.Move.SrcRank),
 				FileToChar(packet->Data.Move.DstFile), RankToChar(packet->Data.Move.DstRank));
