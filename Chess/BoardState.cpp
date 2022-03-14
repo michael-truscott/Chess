@@ -381,6 +381,9 @@ const ChessMove* BoardState::LastMove() const
 std::vector<std::unique_ptr<ChessMove>> BoardState::GetAllLegalMovesForPiece(Piece* piece) const
 {
 	std::vector<std::unique_ptr<ChessMove>> result;
+	if (piece->captured)
+		return result;
+
 	for (int rank = (int)Rank::R1; rank <= (int)Rank::R8; rank++) {
 		for (int file = (int)File::A; file <= (int)File::H; file++) {
 			// moving to the same square should never be a legal move but skip it just in case

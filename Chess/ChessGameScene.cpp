@@ -2,6 +2,7 @@
 #include "AssetLoader.h"
 #include "Input.h"
 #include <iostream>
+#include <stdio.h>
 #include "globals.h"
 
 constexpr int SQUARE_SIZE = 64;
@@ -55,6 +56,9 @@ void ChessGameScene::Update(float dt)
 		}
 		if (Input::KeyPressed(SDL_SCANCODE_F)) {
 			FlipView();
+		}
+		if (Input::KeyPressed(SDL_SCANCODE_L)) {
+			ListLegalMoves();
 		}
 		if (m_canUndoMoves && Input::KeyPressed(SDL_SCANCODE_LEFT)) {
 			m_boardState.Rewind();
@@ -125,6 +129,27 @@ void ChessGameScene::HandleMouse()
 			}
 		}
 	}
+}
+
+void ChessGameScene::ListLegalMoves()
+{
+	if (m_selectedPiece == nullptr) {
+		printf("ListLegalMoves: No piece selected\n\n");
+		return;
+	}
+
+	printf("ListLegalMoves:\n");
+	if (m_legalMoves.empty()) {
+		printf("No legal moves\n\n");
+		return;
+	}
+	for (auto& move : m_legalMoves) {
+		printf("%s (%c%c) to %c%c\n", PieceTypeToString(move->piece->type),
+			FileToChar(move->oldFile), RankToChar(move->oldRank),
+			FileToChar(move->newFile), RankToChar(move->newRank));
+		
+	}
+	printf("\n");
 }
 
 void ChessGameScene::SelectPiece(Piece* piece)

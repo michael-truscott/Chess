@@ -39,6 +39,7 @@ private:
     void DrawMoveDot(ChessMove* move);
 
     void HandleMouse();
+    void ListLegalMoves();
     
     void ResetBoard();
 
