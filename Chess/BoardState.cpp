@@ -466,13 +466,14 @@ bool BoardState::IsMovePositionLegal(ChessMove* move) const
 			return true;
 
 		if (move->type == ChessMoveType::CASTLE) {
-			if (move->piece->hasMoved || !move->extra.castleData.rook || move->extra.castleData.rook->hasMoved)
+			if (move->piece->hasMoved || !move->extra.castleData.rook || move->extra.castleData.rook->hasMoved || move->newRank != move->oldRank)
 				return false;
 
 			if (IsPositionInCheck(move->piece->color))
 				return false;
 
-			if (move->newRank == move->oldRank && (move->newFile == File::G || move->newFile == File::C))
+			if ((move->newFile == File::G || move->newFile == File::C) &&
+				IsPathClear(move->piece, move->extra.castleData.rook->rank, move->extra.castleData.rook->file))
 				return true;
 		}
 		break;
