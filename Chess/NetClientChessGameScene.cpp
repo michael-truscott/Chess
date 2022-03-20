@@ -28,8 +28,11 @@ void NetClientChessGameScene::Update(float dt)
 			ProcessPacket(&packet);
 		}
 
-		if (m_gameStarted)
-			ChessGameScene::Update(dt);
+		if (m_gameStarted) {
+			if (!m_pendingMove.isWaiting) {
+				ChessGameScene::Update(dt);
+			}
+		}
 	}
 	else {
 		throw std::runtime_error("Server has disconnected");
@@ -115,11 +118,19 @@ void NetClientChessGameScene::ProcessPacket(GamePacket* packet)
 		if (!m_pendingMove.isWaiting)
 			throw std::runtime_error("Server sent a MoveAck when there was no pending move on the client side");
 
+		if (!packet->Data.MoveAck.Accepted) {
+			printf("Server rejected move: %s (%c%c) to %c%c\n", PieceTypeToString(m_pendingMove.piece->type),
+				FileToChar(m_pendingMove.piece->file), RankToChar(m_pendingMove.piece->rank),
+				FileToChar(m_pendingMove.file), RankToChar(m_pendingMove.rank));
+			m_pendingMove.isWaiting = false;
+		}
+
 		if (m_pendingMove.isPromote) {
 			ApplyPromoteMove(m_pendingMove.promoteType);
 		}
 		else {
 			m_boardState.MovePiece(m_pendingMove.piece, m_pendingMove.rank, m_pendingMove.file);
+			m_pendingMove.isWaiting = false;
 		}
 		break;
 	}
